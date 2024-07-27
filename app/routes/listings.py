@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
+from typing_extensions import Annotated, Union
+
+from ..database.database import getDBSession
+import sqlite3
 
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
 
 @router.get("/", response_model=List[Dict[str, Any]])
-async def getListings():
+async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
+                      query=Union[str, None],
+                      category=Union[str, None],
+                      limit: int = 10,
+                      offset: int = 0):
     return [{"title": "Product 1"}, {"title": "Product 2"}]
 
 

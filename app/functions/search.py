@@ -1,6 +1,7 @@
 
 import sqlite3
 import cachetools.func
+import threading
 
 
 class Search:
@@ -10,12 +11,32 @@ class Search:
         Incrementally indexes new additions to the database every 5 minutes.
     """
 
-    def __init__(self, tableName: str, columnName: str):
+    def __init__(self, tableName: str, columnName: str, connFunction: callable):
         self.tableName = tableName
         self.columnName = columnName
 
-    def indexTable(self, conn: sqlite3.Connection):
-        pass
+        self.lastTimestamp = 0
+        self.documents = []
+
+        # Load the table
+        threading.Thread(target=self.loadTable, args=(connFunction,)).start()
+
+    def loadTable(self, conn: callable):
+        conn = conn()
+        cursor = conn.cursor()
+
+        # Incrementally loads BM25 data
+        cursor.execute(f"SELECT * FROM {self.tableName} WHERE timestamp > {self.lastTimestamp}")
+        self.lastTimestamp = int(time.time())
+
+        for row in cursor.fetchall():
+            self.documents.append(row[self.columnName])
+            #......
+
+
+
+        # Index the table every minute
+        threading.Timer(60, self.loadTable).start()
 
     # Searches using BM25
     @cachetools.func.ttl_cache(maxsize=128, ttl=300)
