@@ -11,13 +11,13 @@ app = FastAPI()
 
 app.include_router(listingsRouter)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 
 @app.middleware("http")
@@ -26,10 +26,9 @@ async def responseScheme(request: Request, call_next):
 
     # if response.body:
     #     request.body = await ResponseSchema(data=response.body)
-    print(response.body)
+    print(response)
 
     return response
-
 
 
 if __name__ == "__main__":

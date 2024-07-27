@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field_validator
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
 from typing_extensions import Annotated
@@ -11,11 +10,10 @@ class SKU(BaseModel):
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=50)
     images: list[Union[str, None]] = Field(..., title="Product Images", description="The images of the product SKU")
-    price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU", gt=0)]
+    price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
 
-
-    @field_validator("price")
     @classmethod
+    @field_validator("price")
     def validate_price(cls, value):
         if value < 0:
             raise ValueError('Price must be greater than 0')
