@@ -1,10 +1,14 @@
 import sqlite3
+from contextlib import contextmanager
 
 
-# Function to get the database connection - A dependency for DB operations
-# Yields the connection and will always close it after a request is done
+@contextmanager
 def getDBSession() -> sqlite3.Connection:
-    conn = sqlite3.connect('databaseProd.db')
+    """
+    Yields a connection to the database and closes it after the request is done.
+    """
+
+    conn = sqlite3.connect('./app/database/databaseProd.db')
     conn.row_factory = sqlite3.Row
 
     try:

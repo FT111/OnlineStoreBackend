@@ -20,15 +20,15 @@ app.include_router(listingsRouter)
 # )
 
 
-@app.middleware("http")
-async def responseScheme(request: Request, call_next):
-    response = await call_next(request)
-
-    # if response.body:
-    #     request.body = await ResponseSchema(data=response.body)
-    print(response)
-
-    return response
+# @app.middleware("http")
+# async def responseScheme(request: Request, call_next):
+#     response = await call_next(request)
+#
+#     # if response.body:
+#     #     request.body = await ResponseSchema(data=response.body)
+#     print(response)
+#
+#     return response
 
 
 if __name__ == "__main__":

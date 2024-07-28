@@ -8,7 +8,7 @@ class Search:
     """
         This class is responsible for searching the SQL database using the BM25 algorithm.
 
-        Incrementally indexes new additions to the database every 5 minutes.
+        Incrementally indexes new additions to the database every minute.
     """
 
     def __init__(self, tableName: str, columnName: str, connFunction: callable):
@@ -17,6 +17,7 @@ class Search:
 
         self.lastTimestamp = 0
         self.documents = []
+        self.documentLengths = []
 
         # Load the table
         threading.Thread(target=self.loadTable, args=(connFunction,)).start()
@@ -30,8 +31,7 @@ class Search:
         self.lastTimestamp = int(time.time())
 
         for row in cursor.fetchall():
-            self.documents.append(row[self.columnName])
-            #......
+
 
 
 
