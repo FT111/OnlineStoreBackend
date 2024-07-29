@@ -8,5 +8,5 @@ data = TypeVar("data")
 
 class ResponseSchema(BaseModel, Generic[data]):
     meta: Dict[str, Any] = Field(..., title="Metadata", description="The metadata of the response")
-    data: Optional[data] = None
+    data: data
     

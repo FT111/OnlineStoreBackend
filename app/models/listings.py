@@ -10,11 +10,11 @@ class SKU(BaseModel):
     """
     Product SKU/Variant
     """
-    ID: str = Field(..., title="Product SKU", description="The SKU of the product")
+    id: str = Field(..., title="Product SKU", description="The SKU of the product")
     title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=50)
-    images: list[Union[str, None]] = Field(..., title="Product Images", description="The images of the product SKU")
+    images: Optional[List[str]] = Field(..., title="Product Images", description="The images of the product SKU")
     price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
 
     @classmethod
@@ -30,6 +30,7 @@ class Listing(BaseModel):
     Product Listing, can contain multiple SKUs
     """
 
+    id: str = Field(..., title="Product ID", description="The ID of the product listing")
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")

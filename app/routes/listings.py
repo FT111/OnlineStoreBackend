@@ -1,32 +1,50 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
-from typing_extensions import Annotated, Union
+from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, PrivilegedListing, ListingGroup
+from ..models.listings import Listing, PrivilegedListing, ListingGroup, SKU
 from ..models.users import User, PrivilegedUser, DatabaseUser
-
 
 import sqlite3
 
-
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", skus=[
+                SKU(id="SKU1", title="SKU 1", description="SKU 1 Description",
+                    images=["http://test.com", "http://test2.com"],
+                    price=100.00),
+                SKU(id="SKU2", title="SKU 2", description="SKU 2 Description",
+                    images=["http://test3.com", "http://test4.com"],
+                    price=200.00)
+            ], views=100, rating=4.5, ownerUser=User(id='0', username="User 1", profileURL='http://meow.com', profilePictureURL="http://profile.com",
+                                                     bannerURL="http://banner.com", description="User 1 Description",
+                                                     joinedAt=1000000000),
+                    )
 
 
 @router.get("/", response_model=ListingGroup)
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
-                      query=Union[str, None],
-                      category=Union[str, None],
+                      query: Optional[str] = None,
+                      category: Optional[str] = None,
                       limit: int = 10,
                       offset: int = 0):
-
-    return ListingGroup()
+    return ListingGroup(meta={
+        'total': 0,
+        'limit': limit,
+        'offset': offset,
+        'query': query,
+        'category': category
+    },
+        data=[
+            listing for i in range(20)
+        ]
+    )
 
 
 @router.post("/")
 async def createListing(listing: Listing,
                         conn: sqlite3.Connection = Depends(getDBSession)):
-
     if not listing:
         raise HTTPException(status_code=400, detail="Invalid listing")
 
