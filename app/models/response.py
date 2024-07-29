@@ -3,10 +3,10 @@ from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field
 from typing import List, Optional, Union, Dict, Any, Tuple, Set, TypeVar
 from typing_extensions import Annotated, Generic
 
-T = TypeVar("T")
+data = TypeVar("data")
 
 
-class ResponseSchema(BaseModel, Generic[T]):
-    meta: Dict[str, Any] = Field(..., title="Meta", description="The metadata of the response")
-    data: Union[List[Dict[str, Any]], Dict[str, Any]] = Field(..., title="Data", description="The data of the response")
+class ResponseSchema(BaseModel, Generic[data]):
+    meta: Dict[str, Any] = Field(..., title="Metadata", description="The metadata of the response")
+    data: Optional[data] = None
     

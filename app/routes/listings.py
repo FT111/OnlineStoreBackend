@@ -3,9 +3,8 @@ from typing import List, Dict, Any
 from typing_extensions import Annotated, Union
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, PrivilegedListing
+from ..models.listings import Listing, PrivilegedListing, ListingGroup
 from ..models.users import User, PrivilegedUser, DatabaseUser
-from ..models.responses import ResponseModel
 
 
 import sqlite3
@@ -14,19 +13,19 @@ import sqlite3
 router = APIRouter(prefix="/listings", tags=["listings"])
 
 
-@router.get("/", response_model=List[Dict[str, Any]])
+@router.get("/", response_model=ListingGroup)
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       query=Union[str, None],
                       category=Union[str, None],
                       limit: int = 10,
                       offset: int = 0):
 
-    return [{"title": "Product 1"}, {"title": "Product 2"}]
+    return ListingGroup()
 
 
 @router.post("/")
-async def createListing(conn: sqlite3.Connection = Depends(getDBSession),
-                        listing: Listing):
+async def createListing(listing: Listing,
+                        conn: sqlite3.Connection = Depends(getDBSession)):
 
     if not listing:
         raise HTTPException(status_code=400, detail="Invalid listing")
