@@ -34,9 +34,11 @@ class Listing(BaseModel):
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
-    skus: list[SKU] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
+    basePrice: int = Field(..., title="Product Base Price", description="The base price of the product listing")
+    multipleSKUs: bool = Field(..., title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
+    addedAt: int = Field(..., title="Added At", description="The datetime the product listing was added")
     ownerUser: User = Field(..., title="Owner User", description="The owner of the product listing")
 
     @classmethod
@@ -61,7 +63,14 @@ class Listing(BaseModel):
         return value
 
 
-class PrivilegedListing(Listing):
+class ListingWithSKUs(Listing):
+    """
+    Contains SKUs, inherits from Listing. Used for detail on a specific listing
+    """
+    skus: List[SKU] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
+
+
+class ListingWithSales(Listing):
     """
     Contains private data, inherits from Listing. For sellers
     """
@@ -69,20 +78,35 @@ class PrivilegedListing(Listing):
     revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 
 
-class ListingsMeta(BaseModel):
+class Response:
     """
-    Metadata for listings
+    REST API Response Models for Listings
     """
-    total: int = Field(0, title="Total Listings", description="The total number of listings returned")
-    limit: int = Field(10, title="Limit", description="The limit of listings per page")
-    offset: int = Field(0, title="Offset", description="The offset of listings")
-    query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
-    category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
 
+    class ListingsMeta(BaseModel):
+        """
+        Metadata for a listings group response
+        """
+        total: int = Field(0, title="Total Listings", description="The total number of listings returned")
+        limit: int = Field(10, title="Limit", description="The limit of listings per page")
+        offset: int = Field(0, title="Offset", description="The offset of listings")
+        query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
+        category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
 
-class ListingGroup(ResponseSchema[ListingsMeta,
-                   List[Union[Listing, PrivilegedListing]]]):
-    """
-    Response Model - Group of listings with metadata for pagination
-    """
-    pass
+    class ListingMeta(BaseModel):
+        pass
+
+    # Specifies the types of the response model
+    class Listings(ResponseSchema[ListingsMeta,
+                   List[Union[Listing, ListingWithSales]]]):
+        """
+        Response Model - Group of listings with metadata for pagination
+        """
+        pass
+
+    class Listing(ResponseSchema[ListingMeta,
+                  Union[ListingWithSKUs, ListingWithSales]]):
+        """
+        Response Model - Single listing
+        """
+        pass

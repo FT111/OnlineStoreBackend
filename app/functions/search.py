@@ -2,6 +2,7 @@
 import sqlite3
 import cachetools.func
 import threading
+import time
 
 
 class Search:
@@ -31,9 +32,8 @@ class Search:
         self.lastTimestamp = int(time.time())
 
         for row in cursor.fetchall():
-
-
-
+            self.documents.append(row)
+            self.documentLengths.append(len(row[self.columnName].split(" ")))
 
         # Index the table every minute
         threading.Timer(60, self.loadTable).start()

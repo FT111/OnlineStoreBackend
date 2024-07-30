@@ -1,35 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, PrivilegedListing, ListingGroup, SKU
+from ..models.listings import Listing, ListingWithSales, SKU
+from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser, DatabaseUser
 
+import cachetools.func
 import sqlite3
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
-listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", skus=[
-                SKU(id="SKU1", title="SKU 1", description="SKU 1 Description",
-                    images=["http://test.com", "http://test2.com"],
-                    price=100.00),
-                SKU(id="SKU2", title="SKU 2", description="SKU 2 Description",
-                    images=["http://test3.com", "http://test4.com"],
-                    price=200.00)
-            ], views=100, rating=4.5, ownerUser=User(id='0', username="User 1", profileURL='http://meow.com', profilePictureURL="http://profile.com",
-                                                     bannerURL="http://banner.com", description="User 1 Description",
-                                                     joinedAt=1000000000),
-                    )
+listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", basePrice=10,
+                  multipleSKUs=True, addedAt=10000000, views=100, rating=4.5,
+                  ownerUser=User(id='0', username="User 1", profileURL='http://meow.com',
+                                 profilePictureURL="http://profile.com",
+                                 bannerURL="http://banner.com", description="User 1 Description",
+                                 joinedAt=1000000000)
+                  )
 
 
-@router.get("/", response_model=ListingGroup)
+@router.get("/", response_model=ListingResponses.Listings)
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       query: Optional[str] = None,
                       category: Optional[str] = None,
                       limit: int = 10,
                       offset: int = 0):
-    return ListingGroup(meta={
+
+    return ListingResponses.Listings(meta={
         'total': 0,
         'limit': limit,
         'offset': offset,
@@ -37,7 +36,7 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
         'category': category
     },
         data=[
-            listing for i in range(20)
+            listing for i in range(50)
         ]
     )
 
