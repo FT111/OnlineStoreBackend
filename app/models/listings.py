@@ -69,7 +69,19 @@ class PrivilegedListing(Listing):
     revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 
 
-class ListingGroup(ResponseSchema[List[Listing]]):
+class ListingsMeta(BaseModel):
+    """
+    Metadata for listings
+    """
+    total: int = Field(0, title="Total Listings", description="The total number of listings returned")
+    limit: int = Field(10, title="Limit", description="The limit of listings per page")
+    offset: int = Field(0, title="Offset", description="The offset of listings")
+    query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
+    category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
+
+
+class ListingGroup(ResponseSchema[ListingsMeta,
+                   List[Union[Listing, PrivilegedListing]]]):
     """
     Response Model - Group of listings with metadata for pagination
     """
