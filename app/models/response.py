@@ -8,6 +8,15 @@ data = TypeVar("data")
 
 
 class ResponseSchema(BaseModel, Generic[meta, data]):
+    """
+    Standard Response Schema for all API responses
+
+    Not directly used in responses, but used as a template for individual response models
+
+    Attributes:
+    meta: Information regarding the response itself
+    data: The data returned by the API
+    """
     meta: meta
     data: data
     

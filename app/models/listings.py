@@ -30,16 +30,16 @@ class Listing(BaseModel):
     Product Listing, can contain multiple SKUs
     """
 
-    id: str = Field(..., title="Product ID", description="The ID of the product listing")
+    id: Optional[str] = Field(..., title="Product ID", description="The ID of the product listing")
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
-    basePrice: int = Field(..., title="Product Base Price", description="The base price of the product listing")
-    multipleSKUs: bool = Field(..., title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
+    basePrice: Optional[int] = Field(..., title="Product Base Price", description="The base price of the product listing")
+    multipleSKUs: bool = Field(False, title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
-    addedAt: int = Field(..., title="Added At", description="The datetime the product listing was added")
-    ownerUser: User = Field(..., title="Owner User", description="The owner of the product listing")
+    addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
+    ownerUser: Optional[User] = Field(..., title="Owner User", description="The owner of the product listing")
 
     @classmethod
     @field_validator("rating")
