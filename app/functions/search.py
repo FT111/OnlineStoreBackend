@@ -9,6 +9,7 @@ import time
 import math
 from collections import defaultdict
 
+
 class Search:
     """
         This class is responsible for searching the SQL database using the BM25 algorithm.
@@ -116,7 +117,7 @@ class Search:
         topResults = [id for id, score in scores[offset:offset + limit]]
 
         # Get the rows of the top results
-        with conn() as connection:
+        with conn as connection:
             cursor = connection.cursor()
             topRows = cursor.execute(
                 f"SELECT * FROM {self.tableName} WHERE id IN ({','.join(['?'] * len(topResults))})",
