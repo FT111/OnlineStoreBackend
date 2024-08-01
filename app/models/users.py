@@ -13,9 +13,9 @@ class User(BaseModel):
 
     id: str = Field(..., title="User ID", description="The ID of the user")
     username: str = Field(..., title="Username", description="The username of the user", max_length=50)
-    profileURL: HttpUrl = Field(..., title="Profile URL", description="The URL of the user's profile")
-    profilePictureURL: Union[HttpUrl, None] = Field(..., title="Profile Picture URL", description="The URL of the user's profile picture")
-    bannerURL: Union[HttpUrl, None] = Field(..., title="Banner URL", description="The URL of the user's banner")
+    profileURL: str = Field(..., title="Profile URL", description="The URL of the user's profile")
+    profilePictureURL: Union[str, None] = Field(..., title="Profile Picture URL", description="The URL of the user's profile picture")
+    bannerURL: Union[str, None] = Field(..., title="Banner URL", description="The URL of the user's banner")
     description: str = Field(..., title="Bio", description="The description of the user", max_length=100)
     joinedAt: int = Field(..., title="Joined At", description="The date the user joined")
 

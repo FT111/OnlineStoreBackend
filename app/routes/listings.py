@@ -14,13 +14,13 @@ import sqlite3
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
-listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", basePrice=10,
-                  multipleSKUs=True, addedAt=10000000, views=100, rating=4.5,
-                  ownerUser=User(id='0', username="User 1", profileURL='http://meow.com',
-                                 profilePictureURL="http://profile.com",
-                                 bannerURL="http://banner.com", description="User 1 Description",
-                                 joinedAt=1000000000)
-                  )
+# listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", basePrice=10,
+#                   multipleSKUs=True, addedAt=10000000, views=100, rating=4.5,
+#                   ownerUser=User(id='0', username="User 1", profileURL='http://meow.com',
+#                                  profilePictureURL="http://profile.com",
+#                                  bannerURL="http://banner.com", description="User 1 Description",
+#                                  joinedAt=1000000000)
+#                   )
 
 skuListing = ListingWithSKUs(id='0', title="Product 1", description="Product 1 Description", category="Category 1",
                              basePrice=10, multipleSKUs=True, addedAt=10000000, views=100, rating=4.5,
@@ -42,20 +42,19 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       limit: int = 10,
                       offset: int = 0):
 
+    listings = []
     if query:
         listings = instances.listingsSearch.searchTable(conn, query, offset, limit)
-        print([actualListing['title'] for actualListing in listings])
+        print([dict(actualListing) for actualListing in listings])
 
     return ListingResponses.Listings(meta={
-        'total': 0,
+        'total': len(listings),
         'limit': limit,
         'offset': offset,
         'query': query,
         'category': category
     },
-        data=[
-            listing for i in range(50)
-        ]
+        data=listings
     )
 
 
