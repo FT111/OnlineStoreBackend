@@ -1,6 +1,7 @@
 import contextlib
 
 from ..database.databaseQueries import Queries
+from ..functions import data
 
 import sqlite3
 import cachetools.func
@@ -49,11 +50,15 @@ class Search:
 
         if newRows:
             for id, title, description, *_ in newRows:
+                if id in [id for id, _ in self.termFrequencies]:  # Remove in prod
+                    continue
                 self.processDocument(description, id, title)
 
             self.documentCount += len(newRows)
-            self.averageDocumentLength = sum([sum(termFrequencies.values()) for id, termFrequencies in self.termFrequencies]) / self.documentCount
+            self.averageDocumentLength = sum(
+                [sum(termFrequencies.values()) for id, termFrequencies in self.termFrequencies]) / self.documentCount
 
+        print(f"Loaded {self.tableName}")
         # Index the table every minute
         threading.Timer(60, self.loadTable, args=(conn,)).start()
 
@@ -79,20 +84,17 @@ class Search:
         queryScores = defaultdict(float)
         # Calculate BM25 scores
         for id, termFrequencies in self.termFrequencies:
-
             documentLength = sum(termFrequencies.values())
             for term in tokenisedQuery:
                 if term in termFrequencies:
-
                     termScore = self.scoreTerm(documentLength, term, termFrequencies)
-
                     queryScores[id] += termScore
 
         return self.sortScores(queryScores)
 
     @staticmethod
     def sortScores(queryScores: dict) -> list:
-        queryScoresSorted = sorted(queryScores.items(), key= lambda item: item[1], reverse=True)
+        queryScoresSorted = sorted(queryScores.items(), key=lambda item: item[1], reverse=True)
 
         return queryScoresSorted
 
@@ -104,7 +106,7 @@ class Search:
             (self.documentCount - self.documentFrequencies[term] + 0.5) / (self.documentFrequencies[term] + 0.5))
 
         termScore = inverseDocumentFrequency * (termFrequencies[term] * (self.k1 + 1)) / (
-                    termFrequencies[term] + self.k1 * (1 - self.b + self.b * documentLength / self.documentCount))
+                termFrequencies[term] + self.k1 * (1 - self.b + self.b * documentLength / self.documentCount))
 
         return termScore
 
@@ -117,13 +119,9 @@ class Search:
         topResults = [id for id, score in scores[offset:offset + limit]]
 
         # Get the rows of the top results
-        with conn as connection:
-            cursor = connection.cursor()
-            topRows = cursor.execute(
-                f"SELECT * FROM {self.tableName} WHERE id IN ({','.join(['?'] * len(topResults))})",
-                topResults).fetchall()
+        listings = data.idsToListings(conn, topResults)
 
-        return topRows
+        return listings
 
     # Tokenises the query, ready for a MB25 search
     @staticmethod
