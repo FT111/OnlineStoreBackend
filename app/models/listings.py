@@ -90,7 +90,6 @@ class Response:
         total: int = Field(0, title="Total Listings", description="The total number of listings returned")
         limit: int = Field(10, title="Limit", description="The limit of listings per page")
         offset: int = Field(0, title="Offset", description="The offset of listings")
-        pages: int = Field(0, title="Pages", description="The number of pages")
         query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
         category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
 

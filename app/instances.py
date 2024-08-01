@@ -1,8 +1,8 @@
 
-from app.functions.search import Search
+from app.functions.search import ListingSearch
 from app.database.database import getDBSession
 
 
-listingsSearch = Search("listings", "description", getDBSession)
+listingsSearch = ListingSearch(getDBSession)
 
 

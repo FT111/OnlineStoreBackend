@@ -9,17 +9,54 @@ import threading
 import time
 import math
 from collections import defaultdict
+from abc import ABC, abstractmethod
 
 
-class Search:
+class Search(ABC):
+    """
+    An abstract class for search algorithms
+    """
+    @abstractmethod
+    def searchTable(self, conn: contextlib.contextmanager, query: str, offset: int, limit: int) -> list:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def tokeniseQuery(query: str) -> list:
+        pass
+
+    @abstractmethod
+    def loadTable(self, conn: callable):
+        pass
+
+    @abstractmethod
+    def queryDocuments(self, query) -> list:
+        pass
+
+    @abstractmethod
+    def processDocument(self, description: str, id, title: str):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def sortScores(queryScores: dict) -> list:
+        pass
+
+    @abstractmethod
+    def scoreTerm(self, documentLength, term, termFrequencies) -> float:
+        pass
+
+
+# Implements the BM25 search algorithm for listings
+class ListingSearch(Search):
     """
         This class is responsible for searching the SQL database using the BM25 algorithm.
 
         Incrementally indexes new additions to the database every minute.
     """
 
-    def __init__(self, tableName: str, columnName: str, connFunction: callable):
-        self.tableName = tableName
+    def __init__(self, connFunction: callable):
+        self.tableName = 'listings'
 
         self.lastTimestamp = 0
         self.k1 = 1.5
