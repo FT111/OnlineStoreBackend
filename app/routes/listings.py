@@ -44,7 +44,7 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
     listings = []
     if query:
-        listings = instances.listingsSearch.searchTable(conn, query, offset, limit)
+        listings = instances.listingsSearch.searchTable(conn, query, offset, limit, category)
         print([dict(actualListing) for actualListing in listings])
 
     return ListingResponses.Listings(meta={

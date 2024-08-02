@@ -10,6 +10,7 @@ import time
 import math
 from collections import defaultdict
 from abc import ABC, abstractmethod
+from typing import Optional, List
 
 
 class Search(ABC):
@@ -149,7 +150,8 @@ class ListingSearch(Search):
 
     # Searches using BM25
     @cachetools.func.ttl_cache(maxsize=128, ttl=300)
-    def searchTable(self, conn: contextlib.contextmanager, query: str, offset: int, limit: int) -> list:
+    def searchTable(self, conn: contextlib.contextmanager, query: str, offset: int,
+                    limit: int, category: Optional[str] = None) -> list:
         scores = self.queryDocuments(query)
 
         # Get the IDs of the top results
@@ -158,7 +160,7 @@ class ListingSearch(Search):
         # Get the rows of the top results
         listings = data.idsToListings(conn, topResults)
 
-        return listings
+        return [listing for listing in listings if category is None or listing.category == category]
 
     # Tokenises the query, ready for a MB25 search
     @staticmethod
