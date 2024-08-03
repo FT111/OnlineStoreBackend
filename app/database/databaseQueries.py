@@ -1,6 +1,6 @@
-
+import sqlite3
 from sqlite3 import Connection
-from typing import Annotated
+from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
 
 class Queries:
@@ -9,7 +9,7 @@ class Queries:
     """
 
     @staticmethod
-    def getRowsSince(conn: callable, tableName: str, timestamp: int):
+    def getListingsSince(conn: callable, timestamp: int) -> List[sqlite3.Row]:
         """
         Returns all rows since the timestamp.
         """
@@ -17,11 +17,16 @@ class Queries:
         with conn() as connection:
             cursor = connection.cursor()
 
-            cursor.execute(f"SELECT * FROM {tableName} WHERE addedAt > {timestamp}")
+            cursor.execute(f"""SELECT listings.id, listings.title, listings.description,
+                                (SELECT categories.title FROM categories WHERE categories.id = listings.categoryID) AS category
+                                FROM listings
+                                WHERE addedAt > ?""",
+                           (timestamp,))
+
             return cursor.fetchall()
 
     @staticmethod
-    def getListingsByIDs(conn: Connection, listingIDs: list) -> list:
+    def getListingsByIDs(conn: callable, listingIDs: list) -> list:
         """
         Get a listing by its ID
         """
