@@ -135,19 +135,28 @@ class ListingSearch(Search):
 
         self.termFrequencies[category].append((id, rowTermFrequencies))
 
-    def queryDocuments(self, query: str, category: str) -> list:
+    def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None) -> list:
+        tokenisedQuery = None
 
-        tokenisedQuery = self.tokeniseQuery(query)
+        if query is not None:
+            tokenisedQuery = self.tokeniseQuery(query)
 
         queryScores = defaultdict(float)
         # Calculate BM25 scores
-        for category in self.termFrequencies.values():
-            for id, termFrequencies in category:
-                documentLength = sum(termFrequencies.values())
-                for term in tokenisedQuery:
-                    if term in termFrequencies:
-                        termScore = self.scoreTerm(documentLength, term, termFrequencies)
-                        queryScores[id] += termScore
+        for searchCategory in self.termFrequencies:
+            for id, termFrequencies in self.termFrequencies[searchCategory]:
+
+                if category == searchCategory or category is None:
+                    documentLength = sum(termFrequencies.values())
+                    if query is not None:
+                        for term in tokenisedQuery:
+                            if term in termFrequencies:
+                                termScore = self.scoreTerm(documentLength, term, termFrequencies)
+                                queryScores[id] += termScore
+                    else:
+                        queryScores[id] = 1
+
+        print('queryScores:', queryScores)
 
         return self.sortScores(queryScores)
 
@@ -168,10 +177,7 @@ class ListingSearch(Search):
     def query(self, conn: contextlib.contextmanager, query: str, offset: int,
               limit: int, category: Optional[str] = None) -> list:
 
-        if query:
-            scores = self.queryDocuments(query, category)
-        else:
-            scores = [(id, 0) for id, _ in self.termFrequencies]
+        scores = self.queryDocuments(query, category)
 
         print(scores)
 
