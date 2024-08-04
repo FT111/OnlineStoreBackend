@@ -11,6 +11,8 @@ import math
 from collections import defaultdict
 from abc import ABC, abstractmethod
 from typing import Optional, List
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 
 class Search(ABC):
@@ -73,6 +75,8 @@ class ListingSearch(Search):
 
         self.termFrequencies = defaultdict(list)
 
+        self.loadExecutor = ThreadPoolExecutor(max_workers=6)
+
         # Load the table
         threading.Thread(target=self.loadTable, args=(connFunction,)).start()
 
@@ -89,20 +93,25 @@ class ListingSearch(Search):
         self.lastTimestamp = int(time.time())
 
         if newListings:
+
+            loadedListingFutures = []
             print([dict(row) for row in newListings])
 
             for id, title, description, category, *_ in newListings:
 
-                ###############################################################
-                for categoryList in self.termFrequencies.values():
-                    print('categoryList:', categoryList)
-                    if id in [id for id, *_ in categoryList]:  # Remove in prod
-                        continue
-                ###############################################################
+                # ###############################################################
+                # for categoryList in self.termFrequencies.values():
+                #     print('categoryList:', categoryList)
+                #     if id in [id for id, *_ in categoryList]:  # Remove in prod
+                #         continue
+                # ###############################################################
 
-                self.processDocument(description, id, title, category)
+                # Process the document in a separate thread
+                loadedListingFutures.append(self.loadExecutor.submit(self.processDocument, description, id, title, category))
+                # self.processDocument(description, id, title, category)
 
-            print('term freqs:', self.termFrequencies)
+            for future in loadedListingFutures:
+                future.result()
 
             self.documentCount += len(newListings)
             self.averageDocumentLength = self.corpusLength / self.documentCount
@@ -115,8 +124,9 @@ class ListingSearch(Search):
             print("Term Frequencies: ", self.termFrequencies)
             print(type(self.termFrequencies[0]))
 
-        # Index the table every minute
-        threading.Timer(60, self.loadTable, args=(conn,)).start()
+        # # Schedule the next load - Uncomment in prod
+        # time.sleep(60)
+        # self.loadTable(conn)
 
     def processDocument(self, description: str, id, title: str, category: str):
         """
@@ -172,24 +182,55 @@ class ListingSearch(Search):
 
         return termScore
 
+    @staticmethod
+    def sortListings(listings: list, sort: str, order: str = 'desc') -> list:
+        """
+        Sorts listings by a given sort
+        """
+
+        if order == 'asc':
+            reverse = False
+        else:
+            reverse = True
+
+        if sort == 'price':
+            sortedListings = sorted(listings, key=lambda listing: listing.basePrice if listing.basePrice is not None else 0,
+                                    reverse=not reverse)
+        elif sort == 'rating':
+            sortedListings = sorted(listings, key=lambda listing: listing.rating, reverse=reverse)
+        elif sort == 'views':
+            sortedListings = sorted(listings, key=lambda listing: listing.views, reverse=reverse)
+        else:
+            sortedListings = listings
+
+        return sortedListings
+
     # Searches using BM25
     @cachetools.func.ttl_cache(maxsize=128, ttl=300)
     def query(self, conn: contextlib.contextmanager, query: str, offset: int,
-              limit: int, category: Optional[str] = None) -> list:
+              limit: int, category: Optional[str] = None,
+              sort: Optional[str] = None, order: Optional[str] = None) -> list:
+
+        """
+        Searches the database using the BM25 algorithm
+        :param conn: An context manager that returns a connection to a database
+        :param query: A query to search for
+        :param offset: How many results to skip, for pagination
+        :param limit: How many results to return
+        :param category: The category to search in. If None, searches all categories
+        :param sort: The sort to use
+        :param order: The order to use - asc or desc
+
+        :return: A list of Listing objects
+        """
 
         scores = self.queryDocuments(query, category)
-
-        print(scores)
-
         # Get the IDs of the top results
         topResults = [id for id, score in scores[offset:offset + limit]]
-
-        print('topResults:', topResults)
-
         # Get the rows of the top results
         listings = data.idsToListings(conn, topResults)
 
-        print('listings:', listings)
+        listings = self.sortListings(listings, sort, order)
 
         return listings
 

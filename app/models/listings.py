@@ -92,6 +92,8 @@ class Response:
         offset: int = Field(0, title="Offset", description="The offset of listings")
         query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
         category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
+        sort: Optional[str] = Field('relevance', title="Sort", description="The sort used for the listings")
+        order: Optional[str] = Field('desc', title="Order", description="The order used for the listings")
 
     class ListingMeta(BaseModel):
         pass

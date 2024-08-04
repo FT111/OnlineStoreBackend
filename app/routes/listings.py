@@ -39,11 +39,12 @@ skuListing = ListingWithSKUs(id='0', title="Product 1", description="Product 1 D
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       query: Optional[str] = None,
                       category: Optional[str] = None,
+                      sort: Optional[str] = None,
+                      order: Optional[str] = 'desc',
                       limit: int = 10,
                       offset: int = 0):
 
-    listings = []
-    listings = instances.listingsSearch.query(conn, query, offset, limit, category)
+    listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
     print([dict(actualListing) for actualListing in listings])
 
     return ListingResponses.Listings(meta={
@@ -51,7 +52,9 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
         'limit': limit,
         'offset': offset,
         'query': query,
-        'category': category
+        'category': category,
+        'sort': sort,
+        'order': order
     },
         data=listings
     )
