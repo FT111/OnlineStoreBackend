@@ -75,7 +75,7 @@ class ListingSearch(Search):
 
         self.termFrequencies = defaultdict(list)
 
-        self.loadExecutor = ThreadPoolExecutor(max_workers=6)
+        self.loadExecutor = ThreadPoolExecutor(max_workers=12)
 
         # Load the table
         threading.Thread(target=self.loadTable, args=(connFunction,)).start()
@@ -158,15 +158,19 @@ class ListingSearch(Search):
 
                 if category == searchCategory or category is None:
                     documentLength = sum(termFrequencies.values())
+
+                    # If a query is provided, score the terms against the query
                     if query is not None:
+                        # Score against each term in the query
                         for term in tokenisedQuery:
+                            # Only score terms that are in the document
                             if term in termFrequencies:
                                 termScore = self.scoreTerm(documentLength, term, termFrequencies)
                                 queryScores[id] += termScore
+
+                    # If no query is provided, score every listing equally
                     else:
                         queryScores[id] = 1
-
-        print('queryScores:', queryScores)
 
         return self.sortScores(queryScores)
 
@@ -188,7 +192,7 @@ class ListingSearch(Search):
         Sorts listings by a given sort
         """
 
-        if order == 'asc':
+        if order == 'desc':
             reverse = False
         else:
             reverse = True
