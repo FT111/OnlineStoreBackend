@@ -44,11 +44,13 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       limit: int = 10,
                       offset: int = 0):
 
-    listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
-    print([dict(actualListing) for actualListing in listings])
+    if limit > 40:
+        raise HTTPException(status_code=400, detail="Limit must be less than 40")
+
+    total, listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
 
     return ListingResponses.Listings(meta={
-        'total': len(listings),
+        'total': total,
         'limit': limit,
         'offset': offset,
         'query': query,
