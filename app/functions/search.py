@@ -14,6 +14,8 @@ from typing import Optional, List
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+from ..models.listings import Listing
+
 
 class Search(ABC):
     """
@@ -174,7 +176,7 @@ class ListingSearch(Search):
 
         return self.sortScores(queryScores)
 
-    def scoreTerm(self, documentLength, term, termFrequencies) -> float:
+    def scoreTerm(self, documentLength: int, term: str, termFrequencies: dict) -> float:
         """
         Scores a term using BM25 inverse document frequency
         """
@@ -187,19 +189,19 @@ class ListingSearch(Search):
         return termScore
 
     @staticmethod
-    def sortListings(listings: list, sort: str, order: str = 'desc') -> list:
+    def sortListings(listings: list[Listing], sort: str, order: str = 'desc') -> list:
         """
         Sorts listings by a given sort
         """
 
-        if order == 'desc':
+        if order == 'asc':
             reverse = False
         else:
             reverse = True
 
         if sort == 'price':
             sortedListings = sorted(listings, key=lambda listing: listing.basePrice if listing.basePrice is not None else 0,
-                                    reverse=not reverse)
+                                    reverse=reverse)
         elif sort == 'rating':
             sortedListings = sorted(listings, key=lambda listing: listing.rating, reverse=reverse)
         elif sort == 'views':
@@ -209,11 +211,10 @@ class ListingSearch(Search):
 
         return sortedListings
 
-    # Searches using BM25
     @cachetools.func.ttl_cache(maxsize=128, ttl=300)
     def query(self, conn: contextlib.contextmanager, query: str, offset: int,
               limit: int, category: Optional[str] = None,
-              sort: Optional[str] = None, order: Optional[str] = None) -> list:
+              sort: Optional[str] = None, order: Optional[str] = None) -> tuple[int, list]:
 
         """
         Searches the database using the BM25 algorithm
@@ -229,12 +230,13 @@ class ListingSearch(Search):
         """
 
         scores = self.queryDocuments(query, category)
-        # Get the IDs of the top results
-        topResults = [id for id, score in scores[offset:offset + limit]]
+
         # Get the rows of the top results
-        listings = data.idsToListings(conn, topResults)
+        listings = data.idsToListings(conn, [id for id, _ in scores])
 
         listings = self.sortListings(listings, sort, order)
 
-        return listings
+        topListings = listings[offset:offset + limit]
+
+        return len(scores), topListings
 
