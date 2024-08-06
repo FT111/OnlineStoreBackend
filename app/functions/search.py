@@ -194,10 +194,7 @@ class ListingSearch(Search):
         Sorts listings by a given sort
         """
 
-        if order == 'asc':
-            reverse = False
-        else:
-            reverse = True
+        reverse = order == 'desc'
 
         if sort == 'price':
             sortedListings = sorted(listings, key=lambda listing: listing.basePrice if listing.basePrice is not None else 0,
@@ -206,6 +203,9 @@ class ListingSearch(Search):
             sortedListings = sorted(listings, key=lambda listing: listing.rating, reverse=reverse)
         elif sort == 'views':
             sortedListings = sorted(listings, key=lambda listing: listing.views, reverse=reverse)
+        elif sort == 'trending':
+            currentTime = int(time.time())
+            sortedListings = sorted(listings, key=lambda listing: (currentTime-listing.addedAt)/listing.views if listing.views > 0 else 1, reverse=reverse)
         else:
             sortedListings = listings
 

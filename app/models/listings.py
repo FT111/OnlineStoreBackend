@@ -14,6 +14,7 @@ class SKU(BaseModel):
     title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=50)
+    condition: str = Field(..., title="Product Condition", description="The condition of the product SKU")
     images: Optional[List[str]] = Field(..., title="Product Images", description="The images of the product SKU")
     price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
 
@@ -22,6 +23,20 @@ class SKU(BaseModel):
     def validate_price(cls, value):
         if value < 0:
             raise ValueError('Price must be greater than 0')
+        return value
+
+
+class SKUWithStock(SKU):
+    """
+    Contains stock, inherits from SKU. For sellers
+    """
+    stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
+
+    @classmethod
+    @field_validator("stock")
+    def validate_stock(cls, value):
+        if value < 0:
+            raise ValueError('Stock must be greater than or equal to 0')
         return value
 
 
@@ -74,6 +89,7 @@ class ListingWithSales(Listing):
     """
     Contains private data, inherits from Listing. For sellers
     """
+    skus: List[SKUWithStock] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
     sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
     revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 
