@@ -48,6 +48,7 @@ class Listing(BaseModel):
     id: Optional[int] = Field(..., title="Product ID", description="The ID of the product listing")
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
+    subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
     basePrice: Optional[int] = Field(0, title="Product Base Price", description="The base price of the product listing")
     multipleSKUs: bool = Field(False, title="Multiple SKUs", description="Whether the product listing has multiple SKUs")

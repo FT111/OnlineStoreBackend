@@ -17,10 +17,23 @@ class Queries:
         with conn() as connection:
             cursor = connection.cursor()
 
-            cursor.execute(f"""SELECT listings.id, listings.title, listings.description,
-                                (SELECT categories.title FROM categories WHERE categories.id = listings.categoryID) AS category
-                                FROM listings
-                                WHERE addedAt > ?""",
+            cursor.execute(f"""SELECT Li.id, Li.title, Li.description,
+                     (
+                        SELECT sCa.title 
+                         FROM subCategories sCa
+                         WHERE sCa.id = Li.subCategoryID
+                    ) AS subCategory,
+                    (
+                         SELECT Ca.title
+                         FROM categories Ca
+                         WHERE Ca.id = (
+                             SELECT sCa.categoryID
+                             FROM subCategories sCa
+                             WHERE sCa.id = Li.subCategoryID
+                         )
+                    ) AS category
+                 FROM listings Li
+                 WHERE addedAt > ?""",
                            (timestamp,))
 
             return cursor.fetchall()
@@ -33,12 +46,21 @@ class Queries:
         query = """
         SELECT
                Li.id, Li.title, Li.description, Li.addedAt,
-               
+
                (
-                   SELECT Ca.title 
+                    SELECT Ca.title
                     FROM categories Ca
-                    WHERE Ca.id = Li.categoryID
+                    WHERE Ca.id = (
+                        SELECT sCa.categoryID
+                        FROM subCategories sCa
+                        WHERE sCa.id = Li.subCategoryID
+                    )
                ) AS category,
+                (
+                   SELECT sCa.title
+                    FROM subCategories sCa
+                    WHERE sCa.id = Li.subCategoryID
+               ) AS subCategory,
                (
                    SELECT json_object(
                        'id', Us.id,
@@ -64,13 +86,13 @@ class Queries:
                    FROM skus Sk
                    WHERE Sk.listingID = Li.id
                ) AS skus,
-               
+
                (
                    SELECT min(Sk.price)
                    FROM skus Sk
                    WHERE Sk.listingID = Li.id
                ) AS basePrice,
-               
+
                (
                    SELECT count(*)
                    FROM listingEvents Ev
@@ -78,10 +100,11 @@ class Queries:
                ) AS views
         FROM listings Li
         WHERE Li.id IN ({})
-            """.format(','.join('?' * len(listingIDs)))
+        """.format(','.join('?' * len(listingIDs)))
 
         with conn as connection:
             cursor = connection.cursor()
             cursor.execute(query, listingIDs)
             listing = cursor.fetchall()
+            print(dict(listing[0]))
             return listing

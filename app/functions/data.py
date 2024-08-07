@@ -30,6 +30,8 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
         listingDict['skus'] = json.loads(listingDict['skus'])
         castedListings.append(listingDict)
 
+    for listing in castedListings:
+        print(f"Category: {listing['category']}, SubCategory: {listing['subCategory']}")
     modelListings = [Listing(**dict(listing)) for listing in castedListings]
 
     return modelListings
