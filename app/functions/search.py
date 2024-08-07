@@ -90,7 +90,7 @@ class ListingSearch(Search):
         """
 
         # Incrementally loads BM25 data
-        newListings = Queries.getListingsSince(conn, self.lastTimestamp)
+        newListings = Queries.Listings.getListingsSince(conn, self.lastTimestamp)
         # Update the last timestamp to the current time, for the next load
         self.lastTimestamp = int(time.time())
 

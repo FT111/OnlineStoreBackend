@@ -7,6 +7,8 @@ from typing_extensions import Annotated
 
 from app.models.users import User, PrivilegedUser, DatabaseUser
 from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
+from app.models.categories import Category, SubCategory
+
 from app.database.databaseQueries import Queries
 
 
@@ -35,5 +37,31 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
     modelListings = [Listing(**dict(listing)) for listing in castedListings]
 
     return modelListings
+
+
+def getAllCategories(conn: callable) -> List[Category]:
+    """
+    Get all categories
+
+    Args:
+    conn: The connection to the database
+
+    Returns:
+    All categories
+    """
+
+    categories = Queries.Categories.getAllCategories(conn)
+
+    castedCategories = []
+    modelCategories = []
+    for category in categories:
+        categoryDict = dict(category)
+        categoryDict['subCategories'] = json.loads(categoryDict['subCategories'])
+        castedCategories.append(categoryDict)
+
+    for category in castedCategories:
+        modelCategories = [Category(**dict(category)) for category in castedCategories]
+
+    return modelCategories
 
 

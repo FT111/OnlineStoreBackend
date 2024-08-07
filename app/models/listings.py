@@ -11,7 +11,7 @@ class SKU(BaseModel):
     Product SKU/Variant
     """
     id: str = Field(..., title="Product SKU", description="The SKU of the product")
-    title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
+    title: str = Field(..., title="Product TitleŸ", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=50)
     condition: str = Field(..., title="Product Condition", description="The condition of the product SKU")
