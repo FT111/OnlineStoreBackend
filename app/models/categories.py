@@ -32,19 +32,19 @@ class Category(BaseModel):
 
     subCategories: Optional[List[SubCategory]] = Field(None, title="Subcategories", description="The subcategories of the category")
 
-    @classmethod
-    @field_validator("title")
-    def validate_title(cls, value):
-        if len(value) < 3:
-            raise ValueError('Title must be at least 3 characters long')
-        return value
-
-    @classmethod
-    @field_validator("description")
-    def validate_description(cls, value):
-        if len(value) < 3:
-            raise ValueError('Description must be at least 3 characters long')
-        return value
+    # @classmethod
+    # @field_validator("title")
+    # def validate_title(cls, value):
+    #     if len(value) < 3:
+    #         raise ValueError('Title must be at least 3 characters long')
+    #     return value
+    #
+    # @classmethod
+    # @field_validator("description")
+    # def validate_description(cls, value):
+    #     if len(value) < 3:
+    #         raise ValueError('Description must be at least 3 characters long')
+    #     return value
 
 
 class Response:
@@ -64,7 +64,7 @@ class Response:
         """
         pass
 
-    class Categories(ResponseSchema[CategoriesMeta, List[Category]]):
+    class Categories(ResponseSchema[CategoriesMeta, List]):
         """
         Response Model for multiple categories
         """

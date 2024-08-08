@@ -1,4 +1,3 @@
-
 import pydantic
 import json
 
@@ -24,7 +23,7 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
     The listing with the given ID
     """
 
-    listings = Queries.getListingsByIDs(conn, listingIDs)
+    listings = Queries.Listings.getListingsByIDs(conn, listingIDs)
     castedListings = []
     for listing in listings:
         listingDict = dict(listing)
@@ -52,16 +51,9 @@ def getAllCategories(conn: callable) -> List[Category]:
 
     categories = Queries.Categories.getAllCategories(conn)
 
-    castedCategories = []
-    modelCategories = []
-    for category in categories:
-        categoryDict = dict(category)
-        categoryDict['subCategories'] = json.loads(categoryDict['subCategories'])
-        castedCategories.append(categoryDict)
-
-    for category in castedCategories:
-        modelCategories = [Category(**dict(category)) for category in castedCategories]
+    modelCategories = [
+        Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
+        for category in categories
+    ]
 
     return modelCategories
-
-

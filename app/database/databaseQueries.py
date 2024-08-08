@@ -132,7 +132,7 @@ class Queries:
                                     FROM subCategories sCa
                                     WHERE sCa.categoryID = categories.id
                                     ) AS subCategories
-                                    )
+                                    
                          FROM categories""")
 
                 return cursor.fetchall()

@@ -37,6 +37,8 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
     total, listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
 
+    print(listings)
+
     return ListingResponses.Listings(meta={
         'total': total,
         'limit': limit,
