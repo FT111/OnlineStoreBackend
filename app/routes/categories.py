@@ -25,8 +25,6 @@ def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
     categories = data.getAllCategories(conn)
     total = len(categories)
 
-    print(type(categories))
-
     return CategoryResponse.Categories(meta={
         'total': total
     },

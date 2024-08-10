@@ -108,7 +108,6 @@ class Queries:
                 cursor = connection.cursor()
                 cursor.execute(query, listingIDs)
                 listing = cursor.fetchall()
-                print(dict(listing[0]))
                 return listing
 
     class Categories:
