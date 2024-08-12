@@ -31,3 +31,20 @@ def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
         data=categories
     )
 
+
+@router.get("/{categoryTitle}", response_model=CategoryResponse.Category)
+def getCategory(categoryTitle: str, conn: sqlite3.Connection = Depends(getDBSession)):
+    """
+    
+    :param categoryTitle:
+    :param conn:
+    :return: 
+    """
+
+    category = data.getCategory(conn, categoryTitle)
+
+    return CategoryResponse.Category(meta={
+
+    },
+        data=category
+    )

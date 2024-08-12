@@ -57,3 +57,22 @@ def getAllCategories(conn: callable) -> List[Category]:
     ]
 
     return modelCategories
+
+
+def getCategory(conn: callable, title: str) -> Category:
+    """
+    Gets a single category
+    :param title:
+    :param conn:
+    :return:
+    """
+
+    print(title)
+    category = Queries.Categories.getCategory(conn, title)
+
+    print(category)
+
+    category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
+
+    return category
+

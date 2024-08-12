@@ -113,6 +113,34 @@ class Queries:
     class Categories:
 
         @staticmethod
+        def getCategory(conn: callable, title) -> sqlite3.Row:
+            """
+            Returns a single category specified by a title
+            :param title:
+            :param conn:
+            :return:
+            """
+
+            with conn as connection:
+                cursor = connection.cursor()
+
+                cursor.execute(f"""SELECT id, title, description,
+                                    (
+                                    SELECT json_group_array(
+                                        json_object(
+                                            'id', sCa.id,
+                                            'title', sCa.title
+                                        ) )
+                                    FROM subCategories sCa
+                                    WHERE sCa.categoryID = categories.id
+                                    ) AS subCategories
+                                    
+                         FROM categories
+                         WHERE title = ?""", (title,))
+
+                return cursor.fetchone()
+
+        @staticmethod
         def getAllCategories(conn: callable) -> List[sqlite3.Row]:
             """
             Returns all categories.
