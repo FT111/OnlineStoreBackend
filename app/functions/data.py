@@ -31,8 +31,6 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
         listingDict['skus'] = json.loads(listingDict['skus'])
         castedListings.append(listingDict)
 
-    for listing in castedListings:
-        print(f"Category: {listing['category']}, SubCategory: {listing['subCategory']}")
     modelListings = [Listing(**dict(listing)) for listing in castedListings]
 
     return modelListings
@@ -66,12 +64,7 @@ def getCategory(conn: callable, title: str) -> Category:
     :param conn:
     :return:
     """
-
-    print(title)
     category = Queries.Categories.getCategory(conn, title)
-
-    print(category)
-
     category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
 
     return category
