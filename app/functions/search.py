@@ -197,6 +197,9 @@ class ListingSearch(Search):
 
         reverse = order == 'desc'
 
+        if sort:
+            sort = sort.lower()
+
         if sort == 'price':
             sortedListings = sorted(listings, key=lambda listing: listing.basePrice if listing.basePrice is not None else 0,
                                     reverse=reverse)
