@@ -94,6 +94,16 @@ class Queries:
                        FROM skus Sk
                        WHERE Sk.listingID = Li.id
                    ) AS basePrice,
+                   
+                   
+                    (
+                        SELECT CASE
+                            WHEN count(*) > 1 THEN 1
+                            ELSE 0
+                        END
+                        FROM skus Sk
+                        WHERE Sk.listingID = Li.id
+                    ) AS multipleSKUs,
     
                    (
                        SELECT count(*)

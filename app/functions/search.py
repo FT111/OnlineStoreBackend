@@ -97,7 +97,6 @@ class ListingSearch(Search):
         if newListings:
 
             loadedListingFutures = []
-            print([dict(row) for row in newListings])
 
             for id, title, description, subCategory, category, *_ in newListings:
 
@@ -157,7 +156,6 @@ class ListingSearch(Search):
         # Calculate BM25 scores
         for searchCategory in self.termFrequencies:
             for id, termFrequencies in self.termFrequencies[searchCategory]:
-                print(category, searchCategory)
 
                 if category == searchCategory or category is None:
                     documentLength = sum(termFrequencies.values())
