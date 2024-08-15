@@ -47,7 +47,7 @@ class Queries:
             """
             query = """
             SELECT
-                   Li.id, Li.title, Li.description, Li.addedAt,
+                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views,
     
                    (
                         SELECT Ca.title

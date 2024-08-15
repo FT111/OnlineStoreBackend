@@ -154,6 +154,7 @@ class ListingSearch(Search):
 
         queryScores = defaultdict(float)
         # Calculate BM25 scores
+        # Checks against every category of stored listing terms
         for searchCategory in self.termFrequencies:
             for id, termFrequencies in self.termFrequencies[searchCategory]:
 
@@ -165,10 +166,11 @@ class ListingSearch(Search):
                         # Score against each term in the query
                         for term in tokenisedQuery:
                             # Only score terms that are in the document
-                            if term in termFrequencies:
-                                termScore = self.scoreTerm(documentLength, term, termFrequencies)
-                                queryScores[id] += termScore
+                            if term not in termFrequencies:
+                                continue
 
+                            termScore = self.scoreTerm(documentLength, term, termFrequencies)
+                            queryScores[id] += termScore
                     # If no query is provided, score every listing equally
                     else:
                         queryScores[id] = 1
