@@ -6,6 +6,10 @@ from app.models.users import User, PrivilegedUser, DatabaseUser
 from app.models.response import ResponseSchema
 
 
+class Attribute(BaseModel):
+    pass
+
+
 class SubCategory(BaseModel):
     """
     SubCategory Model
