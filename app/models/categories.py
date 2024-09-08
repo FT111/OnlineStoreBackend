@@ -33,6 +33,7 @@ class Category(BaseModel):
     id: int = Field(..., title="Category ID", description="The ID of the category")
     title: str = Field(..., title="Category Title", description="The title of the category")
     description: str = Field(..., title="Category Description", description="The description of the category")
+    colour: str = Field(..., title="Category Colour", description="The RGB colour value of the category")
 
     subCategories: Optional[List[SubCategory]] = Field(None, title="Subcategories", description="The subcategories of the category")
 

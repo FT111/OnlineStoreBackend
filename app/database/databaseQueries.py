@@ -134,7 +134,7 @@ class Queries:
             with conn as connection:
                 cursor = connection.cursor()
 
-                cursor.execute(f"""SELECT id, title, description,
+                cursor.execute(f"""SELECT id, title, description, colour,
                                     (
                                     SELECT json_group_array(
                                         json_object(
@@ -159,7 +159,7 @@ class Queries:
             with conn as connection:
                 cursor = connection.cursor()
 
-                cursor.execute(f"""SELECT id, title, description,
+                cursor.execute(f"""SELECT id, title, description, colour,
                                     (
                                     SELECT json_group_array(
                                         json_object(

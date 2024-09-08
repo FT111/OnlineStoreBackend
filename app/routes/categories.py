@@ -43,6 +43,8 @@ def getCategory(categoryTitle: str, conn: sqlite3.Connection = Depends(getDBSess
 
     category = data.getCategory(conn, categoryTitle)
 
+    print(category)
+
     return CategoryResponse.Category(meta={
 
     },

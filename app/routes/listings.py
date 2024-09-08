@@ -37,8 +37,6 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
     total, listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
 
-    print(listings)
-
     return ListingResponses.Listings(meta={
         'total': total,
         'limit': limit,
@@ -63,7 +61,7 @@ async def createListing(listing: Listing,
 
 @router.get("/{listingID}", response_model=ListingResponses.Listing)
 async def getListing(listingID: str):
-    return ListingResponses.Listing(meta={"id": listingID}, data=skuListing)
+    return ListingResponses.Listing(meta={"id": listingID}, data=ListingWithSKUs)
 
 
 @router.put("/{listingID}")
