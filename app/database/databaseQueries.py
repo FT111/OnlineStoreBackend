@@ -90,11 +90,22 @@ class Queries:
                    ) AS skus,
     
                    (
-                       SELECT min(Sk.price)
+                       SELECT min(Sk.price * (1 - Sk.discount / 100.0))
                        FROM skus Sk
                        WHERE Sk.listingID = Li.id
                    ) AS basePrice,
                    
+            
+                    (
+                       SELECT CASE
+                           WHEN EXISTS (
+                               SELECT 1
+                               FROM skus Sk
+                               WHERE Sk.listingID = Li.id AND Sk.discount > 0
+                           ) THEN 1
+                           ELSE 0
+                       END
+                   ) AS hasDiscount,
                    
                     (
                         SELECT CASE

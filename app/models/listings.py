@@ -51,6 +51,7 @@ class Listing(BaseModel):
     subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
     basePrice: Optional[int] = Field(0, title="Product Base Price", description="The base price of the product listing")
+    hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")
     multipleSKUs: bool = Field(False, title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
