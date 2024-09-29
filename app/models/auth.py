@@ -5,6 +5,15 @@ from typing_extensions import Annotated
 from app.models.response import ResponseSchema
 
 
+class UserCredentials(BaseModel):
+    """
+    User Credentials
+    """
+
+    email: EmailStr = Field(..., title="Email", description="The email of the user")
+    password: str = Field(..., title="Password", description="The password of the user")
+
+
 class Token(BaseModel):
     """
     Token schema

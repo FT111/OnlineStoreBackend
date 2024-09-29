@@ -3,7 +3,7 @@ from sqlite3 import Connection
 from ..database.databaseQueries import Queries
 
 
-def authenticateUser(email: str, password: str, dbSession: Connection):
+def authenticateUser(dbSession: Connection, email: str, password: str):
     """
     Authenticates a user by email and password
     """
