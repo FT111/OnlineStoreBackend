@@ -8,6 +8,18 @@ class Queries:
     This class is responsible for executing SQL queries on the database.
     """
 
+    class Users:
+        @staticmethod
+        def getUserByEmail(conn: callable, email: str) -> sqlite3.Row:
+            """
+            Get a user by their email
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+                user = cursor.fetchone()
+                return user
+
     class Listings:
 
         @staticmethod

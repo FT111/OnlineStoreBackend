@@ -117,14 +117,6 @@ class ListingSearch(Search):
             self.documentCount += len(newListings)
             self.averageDocumentLength = self.corpusLength / self.documentCount
 
-            print(f"Loaded {self.tableName}")
-            print("Doc Frequencies: ", self.documentFrequencies)
-            print("Doc Count: ", self.documentCount)
-            print("Avg Doc Length: ", self.averageDocumentLength)
-
-            print("Term Frequencies: ", self.termFrequencies)
-            print(type(self.termFrequencies[0]))
-
         # # Schedule the next load - Uncomment in prod
         # time.sleep(60)
         # self.loadTable(conn)
