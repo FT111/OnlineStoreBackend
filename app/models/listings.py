@@ -58,26 +58,23 @@ class Listing(BaseModel):
     addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
     ownerUser: Optional[User] = Field(..., title="Owner User", description="The owner of the product listing")
 
-    @classmethod
     @field_validator("rating")
     def validate_rating(cls, value):
-        if value < 0 or value > 5:
-            raise ValueError('Rating must be between 0 and 5')
+        assert 0 <= value <= 5, 'Rating must be between 0 and 5'
         return value
 
-    @classmethod
     @field_validator("views")
     def validate_views(cls, value):
         if value <= 0:
             raise ValueError('Views must be greater than or equal to 0')
         return value
 
-    @classmethod
-    @field_validator("skus")
-    def validate_skus(cls, value):
-        if len(value) < 1:
-            raise ValueError('At least one SKU is required')
-        return value
+    # @classmethod
+    # @field_validator("skus")
+    # def validate_skus(cls, value):
+    #     if len(value) < 1:
+    #         raise ValueError('At least one SKU is required')
+    #     return value
 
 
 class ListingWithSKUs(Listing):
