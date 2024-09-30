@@ -9,7 +9,6 @@ class UserCredentials(BaseModel):
     """
     User Credentials
     """
-
     email: EmailStr = Field(..., title="Email", description="The email of the user")
     password: str = Field(..., title="Password", description="The password of the user")
 
@@ -18,7 +17,6 @@ class Token(BaseModel):
     """
     Token schema
     """
-
     token: str = Field(..., title="Token", description="The token")
     expires: int = Field(..., title="Expires", description="The expiry of the token")
 
