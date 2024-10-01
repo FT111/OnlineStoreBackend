@@ -65,7 +65,7 @@ class Listing(BaseModel):
 
     @field_validator("views")
     def validate_views(cls, value):
-        if value <= 0:
+        if value < 0:
             raise ValueError('Views must be greater than or equal to 0')
         return value
 
