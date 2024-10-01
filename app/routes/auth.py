@@ -29,7 +29,7 @@ async def authenticateToken(credentials: OAuth2PasswordRequestForm = Depends(),
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = generateToken(credentials.username, credentials.password)
+    token = generateToken(user['id'], user['emailAddress'])
 
     return AuthResponse.Token(meta={},
                               data=Token(token=token)
