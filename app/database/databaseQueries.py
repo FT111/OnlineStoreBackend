@@ -16,7 +16,7 @@ class Queries:
             """
             with conn as connection:
                 cursor = connection.cursor()
-                cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+                cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
                 user = cursor.fetchone()
                 return user
 

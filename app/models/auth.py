@@ -18,7 +18,6 @@ class Token(BaseModel):
     Token schema
     """
     token: str = Field(..., title="Token", description="The token")
-    expires: int = Field(..., title="Expires", description="The expiry of the token")
 
 
 class Response:
