@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 
 from pydantic import Field
 from fastapi.security import OAuth2PasswordRequestForm
+from starlette.responses import Response
 from typing_extensions import Annotated, Union, Optional
 
 from ..models.auth import Response as AuthResponse
@@ -19,8 +20,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post('/token', response_model=AuthResponse.Token)
-async def authenticateToken(credentials: OAuth2PasswordRequestForm = Depends(),
-                            conn: sqlite3.Connection = Depends(getDBSession)):
+async def authenticateCredentials(response: Response,
+                                  credentials: OAuth2PasswordRequestForm = Depends(),
+                                  conn: sqlite3.Connection = Depends(getDBSession)):
     """
     Get a token for the user
     """
@@ -31,6 +33,7 @@ async def authenticateToken(credentials: OAuth2PasswordRequestForm = Depends(),
 
     token = generateToken(user['id'], user['emailAddress'])
 
+    response.set_cookie(key="token", value=token, httponly=True)
     return AuthResponse.Token(meta={},
                               data=Token(token=token)
                               )

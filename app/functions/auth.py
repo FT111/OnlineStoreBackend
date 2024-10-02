@@ -1,11 +1,13 @@
 import bcrypt
+from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from jose import jwt
+from jose import jwt, exceptions as joseExceptions
 import time
 import secrets
 from sqlite3 import Connection
 
+from starlette.requests import Request
 from typing_extensions import Union
 
 from ..database.databaseQueries import Queries
@@ -20,7 +22,7 @@ Oauth2Bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def generateToken(userID, userEmail):
     """
-    Generates a token
+    Generates a signed JWT token containing the user's ID and email
     """
 
     expiry = time.time() + JWT_EXPIRY
@@ -28,7 +30,7 @@ def generateToken(userID, userEmail):
     return jwt.encode({'id': userID, 'email': userEmail, 'exp': expiry}, SECRET_KEY, algorithm='HS256')
 
 
-def authenticateUser(dbSession: Connection, email: str, password: str) -> Union[dict, bool]:
+def authenticateUser(dbSession: Connection, email: str, password: str):
     """
     Authenticates a user by email and password
     """
@@ -50,3 +52,24 @@ def authenticateUser(dbSession: Connection, email: str, password: str) -> Union[
         return False
 
 
+def checkToken(token: str) -> Union[dict, bool]:
+    """
+    Validates a signed JWT token
+    """
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload
+    except jwt.ExpiredSignatureError or joseExceptions.JWTError:
+        return False
+
+
+def userRequired(request: Request) -> Union[dict, bool]:
+    """
+    Dependency for checking if a user is logged in
+    """
+
+    if not request.state.user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return request.state.user
