@@ -20,6 +20,28 @@ class Queries:
                 user = cursor.fetchone()
                 return user
 
+        @staticmethod
+        def getUserByID(conn: callable, userID: str) -> sqlite3.Row:
+            """
+            Get a user by their ID
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
+                user = cursor.fetchone()
+                return user
+
+        @staticmethod
+        def getPrivilegedUserByID(conn: callable, userID: str) -> sqlite3.Row:
+            """
+            Get a privileged user by their ID
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
+                user = cursor.fetchone()
+                return user
+
     class Listings:
 
         @staticmethod

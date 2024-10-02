@@ -2,6 +2,8 @@ import pydantic
 import json
 
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
+
+from starlette.requests import Request
 from typing_extensions import Annotated
 
 from app.models.users import User, PrivilegedUser, DatabaseUser
@@ -68,4 +70,26 @@ def getCategory(conn: callable, title: str) -> Category:
     category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
 
     return category
+
+
+def getUserByID(conn: callable, userID: str, requestUser: Union[dict, None] = None) -> Union[User, None]:
+    """
+    Get a user by their ID
+
+    Args:
+    conn: The connection to the database
+    userID: The ID of the user
+
+    Returns:
+    The user with the given ID
+    """
+    if requestUser and requestUser['id'] == userID:
+        user = Queries.Users.getPrivilegedUserByID(conn, userID)
+    else:
+        user = Queries.Users.getUserByID(conn, userID)
+
+    if not user:
+        return None
+
+    user = User(**dict(user))
 

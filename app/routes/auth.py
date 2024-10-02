@@ -27,10 +27,12 @@ async def authenticateCredentials(response: Response,
     Get a token for the user
     """
 
+    # Authenticate the user using the given credentials
     user = authenticateUser(conn, credentials.username, credentials.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Generate a JWT token for the user and sets it as a cookie for later use
     token = generateToken(user['id'], user['emailAddress'])
 
     response.set_cookie(key="token", value=token, httponly=True)

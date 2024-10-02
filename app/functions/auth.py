@@ -35,18 +35,21 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
     Authenticates a user by email and password
     """
 
+    # Gets the user's data
     user = Queries.Users.getUserByEmail(dbSession, email)
 
     # Fails if no user is found
     if not user:
         return False
 
+    # Appends the salt to the given password
     hashedPassword = user['passwordHash']
     salt = user['passwordSalt']
     password += salt
 
-    # Uses bcrypt to avoid timing attacks
+    # Validates given credentials. Uses bcrypt to avoid timing attacks
     if bcrypt.checkpw(password.encode('utf-8'), hashedPassword.encode('utf-8')):
+        # Returns the user's data if the password is correct
         return user
     else:
         return False
