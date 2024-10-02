@@ -60,16 +60,28 @@ def checkToken(token: str) -> Union[dict, bool]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         return payload
-    except jwt.ExpiredSignatureError or joseExceptions.JWTError:
+    except joseExceptions.JWTError:
         return False
 
 
 def userRequired(request: Request) -> Union[dict, bool]:
     """
-    Dependency for checking if a user is logged in
+    Dependency for checking if a user is logged-in
+    User data is gathered via JWT token in middleware
     """
 
     if not request.state.user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+
+    return request.state.user
+
+
+def userOptional(request: Request) -> Union[dict, bool]:
+    """
+    Dependency for using user information if available
+    """
+
+    if not request.state.user:
+        return False
 
     return request.state.user

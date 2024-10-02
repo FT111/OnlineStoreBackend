@@ -6,6 +6,7 @@ from ..database.database import getDBSession
 from ..models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser, DatabaseUser
+from ..functions.auth import userRequired
 
 import app.instances as instances
 
@@ -44,7 +45,7 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
         'query': query,
         'category': category,
         'sort': sort,
-        'order': order
+        'order': order,
     },
         data=listings
     )
