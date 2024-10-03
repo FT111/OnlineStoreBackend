@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from typing import List, Dict, Any
 
 from pydantic import Field
@@ -20,22 +20,21 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post('/token', response_model=AuthResponse.Token)
-async def authenticateCredentials(response: Response,
-                                  credentials: OAuth2PasswordRequestForm = Depends(),
+async def authenticateCredentials(credentials: UserCredentials,
                                   conn: sqlite3.Connection = Depends(getDBSession)):
     """
     Get a token for the user
     """
 
     # Authenticate the user using the given credentials
-    user = authenticateUser(conn, credentials.username, credentials.password)
+    user = authenticateUser(conn, credentials.email, credentials.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Generate a JWT token for the user and sets it as a cookie for later use
     token = generateToken(user['id'], user['emailAddress'])
 
-    response.set_cookie(key="token", value=token, httponly=True)
+    # response.set_cookie(key="token", value=token, httponly=True)
     return AuthResponse.Token(meta={},
                               data=Token(token=token)
                               )
