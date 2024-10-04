@@ -83,13 +83,11 @@ def getUserByID(conn: callable, userID: str, requestUser: Union[dict, None] = No
     Returns:
     The user with the given ID
     """
-    if requestUser and requestUser['id'] == userID:
-        user = Queries.Users.getPrivilegedUserByID(conn, userID)
-    else:
-        user = Queries.Users.getUserByID(conn, userID)
 
-    if not user:
+    user = Queries.Users.getUserByID(conn, userID)
+    print('User:', dict(user))
+
+    if not dict(user):
         return None
 
-    user = User(**dict(user))
-
+    return User(**dict(user))

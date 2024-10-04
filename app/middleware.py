@@ -13,7 +13,7 @@ from app.functions.auth import checkToken
 class GetUserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
 
-        authHeader = request.headers.get('Authorization')
+        authHeader = request.headers.get('authorization')
         JWT = authHeader.split(' ')[1] if authHeader else None
 
         if JWT:
@@ -25,6 +25,8 @@ class GetUserMiddleware(BaseHTTPMiddleware):
         else:
             request.state.user = None
 
+        print(request.state.user)
+        print(request.headers)
         response = await call_next(request)
         return response
 
