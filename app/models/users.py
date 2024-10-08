@@ -16,10 +16,10 @@ class User(BaseModel):
     id: str = Field(..., title="User ID", description="The ID of the user")
     username: str = Field(..., title="Username", description="The username of the user", max_length=50)
     profileURL: Union[str, None] = Field(None, title="Profile URL", description="The URL of the user's profile")
-    profilePictureURL: Union[str, None] = Field(..., title="Profile Picture URL", description="The URL of the user's profile picture")
-    bannerURL: Union[str, None] = Field(..., title="Banner URL", description="The URL of the user's banner")
+    profilePictureURL: Union[str, None] = Field(None, title="Profile Picture URL", description="The URL of the user's profile picture")
+    bannerURL: Union[str, None] = Field(None, title="Banner URL", description="The URL of the user's banner")
     description: str = Field(..., title="Bio", description="The description of the user", max_length=100)
-    joinedAt: int = Field(..., title="Joined At", description="The date the user joined")
+    joinedAt: int = Field(0, title="Joined At", description="The date the user joined")
 
 
 class PrivilegedUser(User):
@@ -27,13 +27,14 @@ class PrivilegedUser(User):
     User's PII data, inherits from User.
     """
 
+    firstName: str = Field(..., title="First Name", description="The first name of the user")
+    surname: str = Field(..., title="Surname", description="The user's surname")
     email: EmailStr = Field(..., title="Email", description="The email of the user")
-    streetAddress: Union[str, None] = Field(..., title="Street Address", description="The street address of the user")
-    city: Union[str, None] = Field(..., title="City", description="The city of the user")
-    province: Union[str, None] = Field(..., title="Region", description="The province of the user")
-    country: Union[str, None] = Field(..., title="Country", description="The country of the user")
-    listings: list[Union[str, None]] = Field(..., title="Listings", description="The listings of the user")
-    sales: int = Field(0, title="Sales", description="The number of sales of the user")
+    streetAddress: Union[str, None] = Field(None, title="Street Address", description="The street address of the user")
+    city: Union[str, None] = Field(None, title="City", description="The city of the user")
+    province: Union[str, None] = Field(None, title="Region", description="The province of the user")
+    country: Union[str, None] = Field(None, title="Country", description="The country of the user")
+    listings: list[Union[str, None]] = Field(None, title="Listings", description="The listings of the user")
 
     @classmethod
     @field_validator("email")
