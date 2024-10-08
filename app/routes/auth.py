@@ -21,6 +21,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post('/token', response_model=AuthResponse.Token)
 async def authenticateCredentials(credentials: UserCredentials,
+                                  response: Response,
                                   conn: sqlite3.Connection = Depends(getDBSession)):
     """
     Get a token for the user
@@ -34,7 +35,6 @@ async def authenticateCredentials(credentials: UserCredentials,
     # Generate a JWT token for the user and sets it as a cookie for later use
     token = generateToken(user['id'], user['emailAddress'])
 
-    # response.set_cookie(key="token", value=token, httponly=True)
     return AuthResponse.Token(meta={},
                               data=Token(token=token)
                               )

@@ -16,12 +16,25 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get('/me', response_model=UserResponse.User)
 async def getMe(
-        conn: sqlite3.Connection = Depends(getDBSession),
-        user: Dict = Depends(userRequired)):
-    """
-    Get the current user
-    """
+		conn: sqlite3.Connection = Depends(getDBSession),
+		user: Dict = Depends(userRequired)):
+	"""
+	Get the current user
+	"""
 
-    userDetails = data.getUserByID(conn, user['id'])
+	userDetails = data.getUserByID(conn, user['id'])
 
-    return UserResponse.User(meta={}, data=userDetails)
+	return UserResponse.User(meta={}, data=userDetails)
+
+
+@router.put('/', response_model=UserResponse.User)
+async def newUser(
+		user: User,
+		conn: sqlite3.Connection = Depends(getDBSession)):
+
+
+	return UserResponse.User(meta={},
+							 data=user)
+
+
+

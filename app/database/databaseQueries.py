@@ -32,6 +32,22 @@ class Queries:
                 return user
 
         @staticmethod
+        def addUser(conn: callable, user: dict):
+            """
+            Adds a user to the database
+            :param conn:
+            :param user:
+            :return:
+            """
+
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                INSERT INTO users (id, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
+                VALUES (?,?,?,?,?,?,?)
+                """, user)
+
+        @staticmethod
         def getPrivilegedUserByID(conn: callable, userID: str) -> sqlite3.Row:
             """
             Get a privileged user by their ID

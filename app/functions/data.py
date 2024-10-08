@@ -14,80 +14,92 @@ from app.database.databaseQueries import Queries
 
 
 def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
-    """
-    Get a listing by its ID
+	"""
+	Get a listing by its ID
 
-    Args:
-    conn: The connection to the database
-    listingID: The ID of the listing
+	Args:
+	conn: The connection to the database
+	listingID: The ID of the listing
 
-    Returns:
-    The listing with the given ID
-    """
+	Returns:
+	The listing with the given ID
+	"""
 
-    listings = Queries.Listings.getListingsByIDs(conn, listingIDs)
-    castedListings = []
-    for listing in listings:
-        listingDict = dict(listing)
-        listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
-        listingDict['skus'] = json.loads(listingDict['skus'])
-        castedListings.append(listingDict)
+	listings = Queries.Listings.getListingsByIDs(conn, listingIDs)
+	castedListings = []
+	for listing in listings:
+		listingDict = dict(listing)
+		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
+		listingDict['skus'] = json.loads(listingDict['skus'])
+		castedListings.append(listingDict)
 
-    modelListings = [Listing(**dict(listing)) for listing in castedListings]
+	modelListings = [Listing(**dict(listing)) for listing in castedListings]
 
-    return modelListings
+	return modelListings
 
 
 def getAllCategories(conn: callable) -> List[Category]:
-    """
-    Get all categories
+	"""
+	Get all categories
 
-    Args:
-    conn: The connection to the database
+	Args:
+	conn: The connection to the database
 
-    Returns:
-    All categories
-    """
+	Returns:
+	All categories
+	"""
 
-    categories = Queries.Categories.getAllCategories(conn)
+	categories = Queries.Categories.getAllCategories(conn)
 
-    modelCategories = [
-        Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
-        for category in categories
-    ]
+	modelCategories = [
+		Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
+		for category in categories
+	]
 
-    return modelCategories
+	return modelCategories
 
 
 def getCategory(conn: callable, title: str) -> Category:
-    """
-    Gets a single category
-    :param title:
-    :param conn:
-    :return:
-    """
-    category = Queries.Categories.getCategory(conn, title)
-    category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
+	"""
+	Gets a single category
+	:param title:
+	:param conn:
+	:return:
+	"""
+	category = Queries.Categories.getCategory(conn, title)
+	category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
 
-    return category
+	return category
 
 
 def getUserByID(conn: callable, userID: str, requestUser: Union[dict, None] = None) -> Union[User, None]:
-    """
-    Get a user by their ID
+	"""
+	Get a user by their ID
 
-    Args:
-    conn: The connection to the database
-    userID: The ID of the user
+	Args:
+	conn: The connection to the database
+	userID: The ID of the user
 
-    Returns:
-    The user with the given ID
-    """
+	Returns:
+	The user with the given ID
+	"""
 
-    user = Queries.Users.getUserByID(conn, userID)
-    print('User:', dict(user))
+	user = Queries.Users.getUserByID(conn, userID)
+	print('User:', dict(user))
 
-    if not dict(user):
-        return None
+	if not dict(user):
+		return None
 
-    return User(**dict(user))
+	return User(**dict(user))
+
+
+def createUser(conn: callable,
+			   user: PrivilegedUser):
+	"""
+	Adds a user to the database
+	:param conn: Database connection
+	:param user: User Pydantic model, assumed to be valid
+	:return:
+	"""
+
+	user = user['']

@@ -47,6 +47,9 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
     salt = user['passwordSalt']
     password += salt
 
+    #DEBUG
+    time.sleep(0)
+
     # Validates given credentials. Uses bcrypt to avoid timing attacks
     if bcrypt.checkpw(password.encode('utf-8'), hashedPassword.encode('utf-8')):
         # Returns the user's data if the password is correct
@@ -67,7 +70,7 @@ def checkToken(token: str) -> Union[dict, bool]:
         return False
 
 
-def userRequired(request: Request) -> Union[dict, bool]:
+def userRequired(request: Request) -> dict:
     """
     Dependency for checking if a user is logged-in
     User data is gathered via JWT token in middleware
