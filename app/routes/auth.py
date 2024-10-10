@@ -38,3 +38,4 @@ async def authenticateCredentials(credentials: UserCredentials,
     return AuthResponse.Token(meta={},
                               data=Token(token=token)
                               )
+

@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
 from typing_extensions import Annotated
 
-from app.models.users import User, PrivilegedUser, DatabaseUser
+from app.models.users import User, PrivilegedUser
 from app.models.response import ResponseSchema
 
 
