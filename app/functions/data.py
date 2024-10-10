@@ -5,12 +5,14 @@ from typing import List, Optional, Union, Dict, Any, Tuple, Set
 
 from starlette.requests import Request
 from typing_extensions import Annotated
+from uuid import uuid4
 
-from app.models.users import User, PrivilegedUser, DatabaseUser
+from app.models.users import User, PrivilegedUser
 from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
 from app.models.categories import Category, SubCategory
 
 from app.database.databaseQueries import Queries
+from app.functions import auth
 
 
 def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
@@ -102,4 +104,11 @@ def createUser(conn: callable,
 	:return:
 	"""
 
-	user = user['']
+	dbUser = dict(user)
+	dbUser['id'] = str(uuid4())
+	dbUser['passwordSalt'] = auth.generateSalt()
+	dbUser['passwordHash'] = auth.hashPassword(dbUser['password'], dbUser['passwordSalt'])
+
+	Queries.Users.addUser(conn, dbUser)
+
+	return

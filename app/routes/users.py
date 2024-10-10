@@ -5,7 +5,7 @@ from typing_extensions import Annotated, Union, Optional
 from ..database.database import getDBSession
 from ..functions import data
 from ..functions.auth import userRequired
-from ..models.users import User, PrivilegedUser
+from ..models.users import User, PrivilegedUser, UserSubmission
 from ..models.users import Response as UserResponse
 
 import cachetools.func
@@ -29,12 +29,10 @@ async def getMe(
 
 @router.put('/', response_model=UserResponse.User)
 async def newUser(
-		user: User,
+		user: UserSubmission,
 		conn: sqlite3.Connection = Depends(getDBSession)):
 
+	user = data.createUser(conn, user)
 
-	return UserResponse.User(meta={},
-							 data=user)
-
-
+	return UserResponse.User(meta={}, data=user)
 

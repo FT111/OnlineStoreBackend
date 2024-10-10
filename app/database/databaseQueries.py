@@ -45,7 +45,8 @@ class Queries:
                 cursor.execute("""
                 INSERT INTO users (id, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
                 VALUES (?,?,?,?,?,?,?)
-                """, user)
+                """, (user['id'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
+                               user['passwordSalt'], user['joinedAt'],))
 
         @staticmethod
         def getPrivilegedUserByID(conn: callable, userID: str) -> sqlite3.Row:

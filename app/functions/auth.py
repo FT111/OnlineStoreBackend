@@ -70,6 +70,14 @@ def checkToken(token: str) -> Union[dict, bool]:
         return False
 
 
+def generateSalt() -> str:
+    """
+    Generates a salt for hashing passwords
+    """
+
+    return bcrypt.gensalt().decode('utf-8')
+
+
 def userRequired(request: Request) -> dict:
     """
     Dependency for checking if a user is logged-in
@@ -91,3 +99,8 @@ def userOptional(request: Request) -> Union[dict, bool]:
         return False
 
     return request.state.user
+
+
+def hashPassword(password, salt):
+    return bcrypt.hashpw(password.encode('utf-8'), salt.encode('utf-8')).decode('utf-8')
+
