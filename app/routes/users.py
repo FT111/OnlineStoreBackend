@@ -36,3 +36,24 @@ async def newUser(
 
 	return UserResponse.User(meta={}, data=user)
 
+
+@router.get('/{userID}', response_model=UserResponse.User)
+async def getUser(
+		userID: str,
+		conn: sqlite3.Connection = Depends(getDBSession)):
+	"""
+	Get a user by their ID
+	:param userID: A user's id
+	:param conn: SQL DB connection
+	:return: 404 or the user
+	"""
+
+	# Queries the database for the user
+	user = data.getUserByID(conn, userID)
+	# Return a 404 if the user is not found
+	if not user:
+		raise HTTPException(status_code=404, detail="User not found")
+
+	# Return the user in standard format
+	return UserResponse.User(meta={}, data=user)
+

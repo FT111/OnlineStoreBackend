@@ -48,7 +48,7 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
     password += salt
 
     #DEBUG
-    time.sleep(0)
+    time.sleep(2)
 
     # Validates given credentials. Uses bcrypt to avoid timing attacks
     if bcrypt.checkpw(password.encode('utf-8'), hashedPassword.encode('utf-8')):
