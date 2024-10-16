@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from asyncio import sleep
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.functions.auth import checkToken
+from app.functions.auth import validateTokenUser
 
 
 class GetUserMiddleware(BaseHTTPMiddleware):
@@ -17,7 +17,7 @@ class GetUserMiddleware(BaseHTTPMiddleware):
         JWT = authHeader.split(' ')[1] if authHeader else None
 
         if JWT:
-            user = checkToken(JWT)
+            user = validateTokenUser(JWT)
             if user:
                 request.state.user = user
             else:

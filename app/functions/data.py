@@ -7,7 +7,7 @@ from starlette.requests import Request
 from typing_extensions import Annotated
 from uuid import uuid4
 
-from app.models.users import User, PrivilegedUser
+from app.models.users import User, PrivilegedUser, UserDetail
 from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
 from app.models.categories import Category, SubCategory
 
@@ -87,12 +87,15 @@ def getUserByID(conn: callable, userID: str, requestUser: Union[dict, None] = No
 	"""
 
 	user = Queries.Users.getUserByID(conn, userID)
-	print('User:', dict(user))
 
 	if not dict(user):
 		return None
 
-	return User(**dict(user))
+	user = dict(user)
+	user['listingIDs'] = json.loads(user['listingIDs'])
+	print('User:', user)
+
+	return UserDetail(**user)
 
 
 def createUser(conn: callable,

@@ -58,7 +58,7 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
         return False
 
 
-def checkToken(token: str) -> Union[dict, bool]:
+def validateTokenUser(token: str) -> Union[dict, bool]:
     """
     Validates a signed JWT token
     """

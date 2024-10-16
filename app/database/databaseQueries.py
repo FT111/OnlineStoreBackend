@@ -1,4 +1,5 @@
 import sqlite3
+from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
@@ -26,9 +27,24 @@ class Queries:
             Get a user by their ID
             """
             with conn as connection:
+                query = """
+                    SELECT id, username, emailAddress, firstName, surname, 
+                    profilePictureURL, bannerURL, description, joinedAt,
+                        (
+                            SELECT json_group_array(
+                                json_object(
+                                    'id', Li.id
+                                    ))
+                                    FROM listings Li
+                                    WHERE Li.ownerID = Us.id
+                        ) AS listingIDs
+                    
+                    FROM users Us
+                    WHERE id = ?"""
                 cursor = connection.cursor()
-                cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
+                cursor.execute(query, (userID,))
                 user = cursor.fetchone()
+
                 return user
 
         @staticmethod

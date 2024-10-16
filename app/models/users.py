@@ -23,9 +23,16 @@ class User(BaseModel):
     joinedAt: int = Field(time.time(), title="Joined At", description="The date the user joined")
 
 
-class PrivilegedUser(User):
+class UserDetail(User):
     """
-    User's PII data, inherits from User.
+    User's content, inherits from User.
+    """
+    listingIDs: list[Union[dict, None]] = Field(None, title="Listings", description="The listings of the user")
+
+
+class PrivilegedUser(UserDetail):
+    """
+    User's PII data, inherits from UserDetail.
     """
 
     firstName: str = Field(..., title="First Name", description="The first name of the user")
@@ -35,7 +42,6 @@ class PrivilegedUser(User):
     city: Union[str, None] = Field(None, title="City", description="The city of the user")
     province: Union[str, None] = Field(None, title="Region", description="The province of the user")
     country: Union[str, None] = Field(None, title="Country", description="The country of the user")
-    listings: list[Union[str, None]] = Field(None, title="Listings", description="The listings of the user")
 
     @classmethod
     @field_validator("email")
