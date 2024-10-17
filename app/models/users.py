@@ -27,7 +27,7 @@ class UserDetail(User):
     """
     User's content, inherits from User.
     """
-    listingIDs: list[Union[dict, None]] = Field(None, title="Listings", description="The listings of the user")
+    listingIDs: list[Union[int, None]] = Field(None, title="Listings", description="The listings of the user")
 
 
 class PrivilegedUser(UserDetail):

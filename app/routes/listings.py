@@ -31,7 +31,8 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       sort: Optional[str] = None,
                       order: Optional[str] = 'desc',
                       limit: int = 10,
-                      offset: int = 0):
+                      offset: int = 0,
+                      ):
 
     if limit > 40:
         raise HTTPException(status_code=400, detail="Limit must be less than 40")

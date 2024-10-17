@@ -115,3 +115,29 @@ def createUser(conn: callable,
 	Queries.Users.addUser(conn, dbUser)
 
 	return
+
+
+def getListingsByUserID(conn, userID):
+	"""
+	Get all listings by a user
+	:param conn: Database connection
+	:param userID: User's ID
+	:return: List of listings
+	"""
+
+	listings = Queries.Listings.getListingsByUserID(conn, userID)
+	castedListings = formatListingRows(listings)
+
+	modelListings = [Listing(**dict(listing)) for listing in castedListings]
+
+	return modelListings
+
+
+def formatListingRows(listings):
+	castedListings = []
+	for listing in listings:
+		listingDict = dict(listing)
+		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
+		listingDict['skus'] = json.loads(listingDict['skus'])
+		castedListings.append(listingDict)
+	return castedListings

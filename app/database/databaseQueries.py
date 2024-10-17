@@ -3,12 +3,89 @@ from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
+listingBaseQuery = """
+            SELECT
+                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views,
+
+                   (
+                        SELECT Ca.title
+                        FROM categories Ca
+                        WHERE Ca.id = (
+                            SELECT sCa.categoryID
+                            FROM subCategories sCa
+                            WHERE sCa.id = Li.subCategoryID
+                        )
+                   ) AS category,
+                    (
+                       SELECT sCa.title
+                        FROM subCategories sCa
+                        WHERE sCa.id = Li.subCategoryID
+                   ) AS subCategory,
+                   (
+                       SELECT json_object(
+                           'id', Us.id,
+                           'username', Us.username,
+                           'profileURL', '/users/' || Us.id,
+                           'profilePictureURL', Us.profilePictureURL,
+                           'bannerURL', Us.bannerURL,
+                           'description', Us.description,
+                           'joinedAt', Us.joinedAt
+                       )
+                       FROM users Us
+                       WHERE Us.id = Li.ownerID
+                   ) AS ownerUser,
+                   (
+                       SELECT json_group_array(
+                           json_object(
+                               'id', Sk.id,
+                               'title', Sk.title,
+                               'description', Sk.description,
+                               'price', Sk.price
+                           )
+                       )
+                       FROM skus Sk
+                       WHERE Sk.listingID = Li.id
+                   ) AS skus,
+
+                   (
+                       SELECT min(Sk.price * (1 - Sk.discount / 100.0))
+                       FROM skus Sk
+                       WHERE Sk.listingID = Li.id
+                   ) AS basePrice,
+
+
+                    (
+                       SELECT CASE
+                           WHEN EXISTS (
+                               SELECT 1
+                               FROM skus Sk
+                               WHERE Sk.listingID = Li.id AND Sk.discount > 0
+                           ) THEN 1
+                           ELSE 0
+                       END
+                   ) AS hasDiscount,
+
+                    (
+                        SELECT CASE
+                            WHEN count(*) > 1 THEN 1
+                            ELSE 0
+                        END
+                        FROM skus Sk
+                        WHERE Sk.listingID = Li.id
+                    ) AS multipleSKUs,
+
+                   (
+                       SELECT count(*)
+                       FROM listingEvents Ev
+                       WHERE Ev.eventType = 'view' AND Ev.listingID = Li.id
+                   ) AS views
+            FROM listings Li """
+
 
 class Queries:
     """
     This class is responsible for executing SQL queries on the database.
     """
-
     class Users:
         @staticmethod
         def getUserByEmail(conn: callable, email: str) -> sqlite3.Row:
@@ -32,9 +109,8 @@ class Queries:
                     profilePictureURL, bannerURL, description, joinedAt,
                         (
                             SELECT json_group_array(
-                                json_object(
-                                    'id', Li.id
-                                    ))
+                                   Li.id
+                                    )
                                     FROM listings Li
                                     WHERE Li.ownerID = Us.id
                         ) AS listingIDs
@@ -76,6 +152,17 @@ class Queries:
                 return user
 
     class Listings:
+        @staticmethod
+        def getListingIDsByUsername(conn: callable, username: str) -> List[int]:
+            """
+            Get a list of listing IDs by a user name
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("SELECT id FROM listings WHERE ownerID ="
+                               " (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
+                listings = cursor.fetchall()
+                return listings
 
         @staticmethod
         def getListingsSince(conn: callable, timestamp: int) -> List[sqlite3.Row]:
@@ -112,89 +199,26 @@ class Queries:
             """
             Get a listing by its ID
             """
-            query = """
-            SELECT
-                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views,
-    
-                   (
-                        SELECT Ca.title
-                        FROM categories Ca
-                        WHERE Ca.id = (
-                            SELECT sCa.categoryID
-                            FROM subCategories sCa
-                            WHERE sCa.id = Li.subCategoryID
-                        )
-                   ) AS category,
-                    (
-                       SELECT sCa.title
-                        FROM subCategories sCa
-                        WHERE sCa.id = Li.subCategoryID
-                   ) AS subCategory,
-                   (
-                       SELECT json_object(
-                           'id', Us.id,
-                           'username', Us.username,
-                           'profileURL', '/users/' || Us.id,
-                           'profilePictureURL', Us.profilePictureURL,
-                           'bannerURL', Us.bannerURL,
-                           'description', Us.description,
-                           'joinedAt', Us.joinedAt
-                       )
-                       FROM users Us
-                       WHERE Us.id = Li.ownerID
-                   ) AS ownerUser,
-                   (
-                       SELECT json_group_array(
-                           json_object(
-                               'id', Sk.id,
-                               'title', Sk.title,
-                               'description', Sk.description,
-                               'price', Sk.price
-                           )
-                       )
-                       FROM skus Sk
-                       WHERE Sk.listingID = Li.id
-                   ) AS skus,
-    
-                   (
-                       SELECT min(Sk.price * (1 - Sk.discount / 100.0))
-                       FROM skus Sk
-                       WHERE Sk.listingID = Li.id
-                   ) AS basePrice,
-                   
-            
-                    (
-                       SELECT CASE
-                           WHEN EXISTS (
-                               SELECT 1
-                               FROM skus Sk
-                               WHERE Sk.listingID = Li.id AND Sk.discount > 0
-                           ) THEN 1
-                           ELSE 0
-                       END
-                   ) AS hasDiscount,
-                   
-                    (
-                        SELECT CASE
-                            WHEN count(*) > 1 THEN 1
-                            ELSE 0
-                        END
-                        FROM skus Sk
-                        WHERE Sk.listingID = Li.id
-                    ) AS multipleSKUs,
-    
-                   (
-                       SELECT count(*)
-                       FROM listingEvents Ev
-                       WHERE Ev.eventType = 'view' AND Ev.listingID = Li.id
-                   ) AS views
-            FROM listings Li
+            query = listingBaseQuery + """
             WHERE Li.id IN ({})
             """.format(','.join('?' * len(listingIDs)))
 
             with conn as connection:
                 cursor = connection.cursor()
                 cursor.execute(query, listingIDs)
+                listing = cursor.fetchall()
+                return listing
+
+        @staticmethod
+        def getListingsByUserID(conn, userID):
+
+            query = listingBaseQuery + """
+            WHERE Li.ownerID = ?
+            """
+
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute(query, (userID,))
                 listing = cursor.fetchall()
                 return listing
 

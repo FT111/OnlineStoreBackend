@@ -7,6 +7,7 @@ from ..functions import data
 from ..functions.auth import userRequired
 from ..models.users import User, PrivilegedUser, UserSubmission
 from ..models.users import Response as UserResponse
+from ..models.listings import Response as ListingResponses
 
 import cachetools.func
 import sqlite3
@@ -57,3 +58,23 @@ async def getUser(
 	# Return the user in standard format
 	return UserResponse.User(meta={}, data=user)
 
+
+@router.get('/{userID}/listings', response_model=ListingResponses.Listings)
+async def getUserListings(
+		userID: str,
+		conn: sqlite3.Connection = Depends(getDBSession)):
+	"""
+	Get all listings by a user
+	:param userID: A user's id
+	:param conn: SQL DB connection
+	:return: 404 or the user's listings
+	"""
+
+	# Queries the database for the user's listings
+	listings = data.getListingsByUserID(conn, userID)
+	# Return a 404 if the user is not found
+	if not listings:
+		raise HTTPException(status_code=404, detail="User not found")
+
+	# Return the user's listings in standard format
+	return ListingResponses.Listings(meta={}, data=listings)
