@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
@@ -76,5 +78,14 @@ async def getUserListings(
 	if not listings:
 		raise HTTPException(status_code=404, detail="User not found")
 
+	topListingCategories = defaultdict(int)
+	for listing in listings:
+		topListingCategories[listing.category] += 1
+
+	print(sorted(dict(topListingCategories)))
+
 	# Return the user's listings in standard format
-	return ListingResponses.Listings(meta={}, data=listings)
+	return ListingResponses.Listings(meta={
+		'total': len(listings),
+		'topCategories': sorted(dict(topListingCategories))
+	}, data=listings)

@@ -109,6 +109,8 @@ class Response:
         category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
         sort: Optional[str] = Field('relevance', title="Sort", description="The sort used for the listings")
         order: Optional[str] = Field('desc', title="Order", description="The order used for the listings")
+        topCategories: Optional[List] = Field(None, title="Top Categories",
+                                              description="The top categories for the listings")
 
     class ListingMeta(BaseModel):
         pass
