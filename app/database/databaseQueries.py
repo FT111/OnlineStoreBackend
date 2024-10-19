@@ -79,7 +79,7 @@ listingBaseQuery = """
                        FROM listingEvents Ev
                        WHERE Ev.eventType = 'view' AND Ev.listingID = Li.id
                    ) AS views
-            FROM listings Li """
+            """
 
 
 class Queries:
@@ -200,6 +200,7 @@ class Queries:
             Get a listing by its ID
             """
             query = listingBaseQuery + """
+            FROM listings Li
             WHERE Li.id IN ({})
             """.format(','.join('?' * len(listingIDs)))
 
@@ -210,9 +211,26 @@ class Queries:
                 return listing
 
         @staticmethod
+        def getListingByID(conn: callable, listingID: str) -> sqlite3.Row:
+            """
+            Get a listing by its ID, With associated SKUs
+            """
+            query = listingBaseQuery + """                        
+            FROM listings Li
+            WHERE Li.id = ?
+            """
+
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute(query, (listingID,))
+                listing = cursor.fetchone()
+                return listing
+
+        @staticmethod
         def getListingsByUserID(conn, userID):
 
             query = listingBaseQuery + """
+            FROM listings Li
             WHERE Li.ownerID = ?
             """
 

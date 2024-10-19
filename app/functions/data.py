@@ -133,11 +133,30 @@ def getListingsByUserID(conn, userID):
 	return modelListings
 
 
+def getListingByID(conn, listingID):
+	"""
+	Get a listing by its ID
+	:param conn: Database connection
+	:param listingID: Listing's ID
+	:return: Listing
+	"""
+
+	listing = Queries.Listings.getListingByID(conn, listingID)
+	castedListing = formatListingRows([listing])[0]
+	print('Listing:', castedListing)
+
+	modelListing = ListingWithSKUs(**dict(castedListing))
+
+
+	return modelListing
+
+
 def formatListingRows(listings):
 	castedListings = []
 	for listing in listings:
 		listingDict = dict(listing)
 		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
 		listingDict['skus'] = json.loads(listingDict['skus'])
+		listingDict['skus'] = [SKU(**sku) for sku in listingDict['skus']]
 		castedListings.append(listingDict)
 	return castedListings

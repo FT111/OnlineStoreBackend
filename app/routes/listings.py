@@ -7,6 +7,7 @@ from ..models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser
 from ..functions.auth import userRequired
+import app.functions.data as data
 
 import app.instances as instances
 
@@ -62,8 +63,13 @@ async def createListing(listing: Listing,
 
 
 @router.get("/{listingID}", response_model=ListingResponses.Listing)
-async def getListing(listingID: str):
-    return ListingResponses.Listing(meta={"id": listingID}, data=ListingWithSKUs)
+async def getListing(
+        listingID: str,
+        conn: sqlite3.Connection = Depends(getDBSession)):
+
+    listingObj = data.getListingByID(conn, listingID)
+
+    return ListingResponses.Listing(meta={"id": listingID}, data=listingObj)
 
 
 @router.put("/{listingID}")

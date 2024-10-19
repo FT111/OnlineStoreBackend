@@ -10,12 +10,11 @@ class SKU(BaseModel):
     """
     Product SKU/Variant
     """
-    id: str = Field(..., title="Product SKU", description="The SKU of the product")
+    id: int = Field(..., title="Product SKU", description="The SKU of the product")
     title: str = Field(..., title="Product TitleŸ", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=50)
-    condition: str = Field(..., title="Product Condition", description="The condition of the product SKU")
-    images: Optional[List[str]] = Field(..., title="Product Images", description="The images of the product SKU")
+    images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
     price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
 
     @classmethod
