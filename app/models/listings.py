@@ -13,7 +13,7 @@ class SKU(BaseModel):
     id: int = Field(..., title="Product SKU", description="The SKU of the product")
     title: str = Field(..., title="Product TitleŸ", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
-                             description="The short description of the product SKU", max_length=50)
+                             description="The short description of the product SKU", max_length=100)
     images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
     price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
 

@@ -29,6 +29,7 @@ router = APIRouter(prefix="/listings", tags=["listings"])
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
                       query: Optional[str] = None,
                       category: Optional[str] = None,
+                      subCategory: Optional[str] = None,
                       sort: Optional[str] = None,
                       order: Optional[str] = 'desc',
                       limit: int = 10,
@@ -38,7 +39,9 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
     if limit > 40:
         raise HTTPException(status_code=400, detail="Limit must be less than 40")
 
-    total, listings = instances.listingsSearch.query(conn, query, offset, limit, category, sort, order)
+    total, listings = instances.listingsSearch.query(conn,
+                                                     query=query, offset=offset, limit=limit, category=category,
+                                                     sort=sort, order=order, subCategory=subCategory)
 
     return ListingResponses.Listings(meta={
         'total': total,

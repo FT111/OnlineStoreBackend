@@ -76,7 +76,7 @@ class ListingSearch(Search):
 		self.averageDocumentLength = 0
 		self.corpusLength = 0
 
-		self.termFrequencies = defaultdict(list)
+		self.termFrequencies = defaultdict(dict)
 
 		self.loadExecutor = ThreadPoolExecutor(max_workers=12)
 
@@ -109,7 +109,7 @@ class ListingSearch(Search):
 
 				# Process the document in a separate thread
 				loadedListingFutures.append(
-					self.loadExecutor.submit(self.processDocument, description, id, title, category))
+					self.loadExecutor.submit(self.processDocument, description, id, title, category, subCategory))
 			# self.processDocument(description, id, title, category)
 
 			for future in loadedListingFutures:
@@ -122,7 +122,7 @@ class ListingSearch(Search):
 	# time.sleep(60)
 	# self.loadTable(conn)
 
-	def processDocument(self, description: str, id, title: str, category: str):
+	def processDocument(self, description: str, id, title: str, category: str, subCategory: str):
 		"""
 		Processes a document for BM25 search
 		"""
@@ -137,9 +137,14 @@ class ListingSearch(Search):
 		for term in rowTermFrequencies:
 			self.documentFrequencies[term] += 1
 
-		self.termFrequencies[category].append((id, rowTermFrequencies))
+		# Add the term frequencies to the termFrequencies dictionary
+		if subCategory not in self.termFrequencies[category]:
+			self.termFrequencies[category][subCategory] = []
 
-	def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None) -> list:
+		self.termFrequencies[category][subCategory].append((id, rowTermFrequencies))
+
+	def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None,
+					   subCategory: Optional[str] = None) -> list:
 		tokenisedQuery = None
 
 		if query is not None:
@@ -149,24 +154,28 @@ class ListingSearch(Search):
 		# Calculate BM25 scores
 		# Checks against every category of stored listing terms
 		for searchCategory in self.termFrequencies:
-			for id, termFrequencies in self.termFrequencies[searchCategory]:
+			for searchSubCategory in self.termFrequencies[searchCategory]:
+				print('searchCategory:', searchCategory)
+				for id, termFrequencies in self.termFrequencies[searchCategory][searchSubCategory]:
 
-				if category == searchCategory or category is None:
-					documentLength = sum(termFrequencies.values())
+					print(subCategory, searchSubCategory)
+					if category == searchCategory or category is None:
+						if subCategory == searchSubCategory or subCategory is None:
+							documentLength = sum(termFrequencies.values())
 
-					# If a query is provided, score the terms against the query
-					if query is not None:
-						# Score against each term in the query
-						for term in tokenisedQuery:
-							# Only score terms that are in the document
-							if term not in termFrequencies:
-								continue
+							# If a query is provided, score the terms against the query
+							if query is not None:
+								# Score against each term in the query
+								for term in tokenisedQuery:
+									# Only score terms that are in the document
+									if term not in termFrequencies:
+										continue
 
-							termScore = self.scoreTerm(documentLength, term, termFrequencies)
-							queryScores[id] += termScore
-					# If no query is provided, score every listing equally
-					else:
-						queryScores[id] = 1
+									termScore = self.scoreTerm(documentLength, term, termFrequencies)
+									queryScores[id] += termScore
+							# If no query is provided, score every listing equally
+							else:
+								queryScores[id] = 1
 
 		return self.sortScores(queryScores)
 
@@ -214,12 +223,13 @@ class ListingSearch(Search):
 	@cachetools.func.ttl_cache(maxsize=128, ttl=300)
 	def query(self, conn: contextlib.contextmanager, query: str, offset: int,
 			  limit: int, category: Optional[str] = None,
-			  sort: Optional[str] = None, order: Optional[str] = None
+			  sort: Optional[str] = None, order: Optional[str] = None,
+			  subCategory: Optional[str] = None
 			  ) -> tuple[int, list]:
 
 		"""
 		Searches the database using the BM25 algorithm
-		:param username: The username to filter by
+		:param subCategory: The subcategory to search in
 		:param conn: An context manager that returns a connection to a database
 		:param query: A query to search for
 		:param offset: How many results to skip, for pagination
@@ -231,7 +241,7 @@ class ListingSearch(Search):
 		:return: A list of Listing objects
 		"""
 
-		scores = self.queryDocuments(query, category)
+		scores = self.queryDocuments(query, category, subCategory)
 
 		listings = data.idsToListings(conn, [score[0] for score in scores])
 		# Get the rows of the top results
