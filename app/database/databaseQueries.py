@@ -135,10 +135,11 @@ class Queries:
             with conn as connection:
                 cursor = connection.cursor()
                 cursor.execute("""
-                INSERT INTO users (id, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
-                VALUES (?,?,?,?,?,?,?)
-                """, (user['id'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
+                INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
+                VALUES (?,?,?,?,?,?,?,?)
+                """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
                                user['passwordSalt'], user['joinedAt'],))
+                connection.commit()
 
         @staticmethod
         def getPrivilegedUserByID(conn: callable, userID: str) -> sqlite3.Row:

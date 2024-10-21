@@ -111,10 +111,13 @@ def createUser(conn: callable,
 	dbUser['id'] = str(uuid4())
 	dbUser['passwordSalt'] = auth.generateSalt()
 	dbUser['passwordHash'] = auth.hashPassword(dbUser['password'], dbUser['passwordSalt'])
+	del dbUser['password']
+	dbUser['joinedAt'] = int(dbUser['joinedAt'])
 
+	print('DB User:', dbUser)
 	Queries.Users.addUser(conn, dbUser)
 
-	return
+	return PrivilegedUser(**dbUser)
 
 
 def getListingsByUserID(conn, userID):

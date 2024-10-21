@@ -34,6 +34,12 @@ async def getMe(
 async def newUser(
 		user: UserSubmission,
 		conn: sqlite3.Connection = Depends(getDBSession)):
+	"""
+	Create a new user in the database.
+	:param user: The user to create stored in a Pydantic model
+	:param conn: SQL DB connection
+	:return: The user created
+	"""
 
 	user = data.createUser(conn, user)
 
@@ -57,6 +63,7 @@ async def getUser(
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 
+
 	# Return the user in standard format
 	return UserResponse.User(meta={}, data=user)
 
@@ -66,7 +73,7 @@ async def getUserListings(
 		userID: str,
 		conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
-	Get all listings by a user
+	Get all listings by a user.
 	:param userID: A user's id
 	:param conn: SQL DB connection
 	:return: 404 or the user's listings
@@ -81,8 +88,6 @@ async def getUserListings(
 	topListingCategories = defaultdict(int)
 	for listing in listings:
 		topListingCategories[listing.category] += 1
-
-	print(sorted(dict(topListingCategories)))
 
 	# Return the user's listings in standard format
 	return ListingResponses.Listings(meta={
