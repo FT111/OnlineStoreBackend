@@ -155,27 +155,29 @@ class ListingSearch(Search):
 		# Checks against every category of stored listing terms
 		for searchCategory in self.termFrequencies:
 			for searchSubCategory in self.termFrequencies[searchCategory]:
-				print('searchCategory:', searchCategory)
 				for id, termFrequencies in self.termFrequencies[searchCategory][searchSubCategory]:
-
 					print(subCategory, searchSubCategory)
-					if category == searchCategory or category is None:
-						if subCategory == searchSubCategory or subCategory is None:
-							documentLength = sum(termFrequencies.values())
 
-							# If a query is provided, score the terms against the query
-							if query is not None:
-								# Score against each term in the query
-								for term in tokenisedQuery:
-									# Only score terms that are in the document
-									if term not in termFrequencies:
-										continue
+					if category != searchCategory and category is not None:
+						continue
 
-									termScore = self.scoreTerm(documentLength, term, termFrequencies)
-									queryScores[id] += termScore
-							# If no query is provided, score every listing equally
-							else:
-								queryScores[id] = 1
+					if subCategory != searchSubCategory and subCategory is not None:
+						continue
+					documentLength = sum(termFrequencies.values())
+
+					# If a query is provided, score the terms against the query
+					if query is None:
+						# If no query is provided, score every listing equally
+						queryScores[id] = 1
+						continue
+					# Score against each term in the query
+					for term in tokenisedQuery:
+						# Only score terms that are in the document
+						if term not in termFrequencies:
+							continue
+
+						termScore = self.scoreTerm(documentLength, term, termFrequencies)
+						queryScores[id] += termScore
 
 		return self.sortScores(queryScores)
 
