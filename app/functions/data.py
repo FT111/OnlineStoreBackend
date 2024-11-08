@@ -1,3 +1,4 @@
+import bcrypt
 import pydantic
 import json
 
@@ -109,8 +110,10 @@ def createUser(conn: callable,
 
 	dbUser = dict(user)
 	dbUser['id'] = str(uuid4())
-	dbUser['passwordSalt'] = auth.generateSalt()
-	dbUser['passwordHash'] = auth.hashPassword(dbUser['password'], dbUser['passwordSalt'])
+	salt = bcrypt.gensalt().decode('utf-8')
+	dbUser['passwordSalt'] = salt
+	passwordHash = auth.hashPassword(dbUser['password'], salt)
+	dbUser['passwordHash'] = passwordHash
 	del dbUser['password']
 	dbUser['joinedAt'] = int(dbUser['joinedAt'])
 
@@ -149,7 +152,6 @@ def getListingByID(conn, listingID):
 	print('Listing:', castedListing)
 
 	modelListing = ListingWithSKUs(**dict(castedListing))
-
 
 	return modelListing
 
