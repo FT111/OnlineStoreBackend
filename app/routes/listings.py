@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
+from ..models.listings import Listing
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser
 from ..functions.auth import userRequired
@@ -76,5 +76,5 @@ async def getListing(
 
 
 @router.put("/{listingID}")
-async def updateListing(listingID: str):
-    return {"message": "Listing updated"}
+async def updateListing(listingFields: Listing):
+    return listingFields
