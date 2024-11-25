@@ -63,7 +63,6 @@ async def getUser(
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
 
-
 	# Return the user in standard format
 	return UserResponse.User(meta={}, data=user)
 

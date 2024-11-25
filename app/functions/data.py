@@ -41,6 +41,23 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
 	return modelListings
 
 
+def createListing(conn: callable, listing: Listing, user: User) -> Listing:
+	"""
+	Adds a listing to the database
+	:param conn: Database connection
+	:param listing: Listing Pydantic model, assumed to be valid
+	:param user: The user creating the listing
+	:return:
+	"""
+
+	dbListing = dict(listing)
+	dbListing['id'] = str(uuid4())
+
+	Queries.Listings.addListing(conn, dbListing)
+
+	return Listing(**dbListing)
+
+
 def getAllCategories(conn: callable) -> List[Category]:
 	"""
 	Get all categories

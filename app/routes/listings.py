@@ -62,6 +62,8 @@ async def createListing(listing: Listing,
     if not listing:
         raise HTTPException(status_code=400, detail="Invalid listing")
 
+    listing = data.createListing(conn, listing)
+
     return ListingResponses.Listing(meta={"id": "0"}, data=listing)
 
 
