@@ -5,7 +5,7 @@ from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, Li
 
 listingBaseQuery = """
             SELECT
-                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views,
+                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
 
                    (
                         SELECT Ca.title

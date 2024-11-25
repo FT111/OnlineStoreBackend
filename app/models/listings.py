@@ -15,7 +15,8 @@ class SKU(BaseModel):
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=100)
     images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
-    price: float = Annotated[float, Field(..., title="Product Price", description="The price of the product SKU")]
+    price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
+
 
     @classmethod
     @field_validator("price")
@@ -49,13 +50,14 @@ class Listing(BaseModel):
     description: str = Field(..., title="Product Description", description="The description of the product listing")
     subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
-    basePrice: Optional[int] = Field(0, title="Product Base Price", description="The base price of the product listing")
+    basePrice: Union[str, float, None] = Field('0', title="Product Base Price", description="The base price of the product listing")
     hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")
     multipleSKUs: bool = Field(False, title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
     addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
     ownerUser: Optional[User] = Field(..., title="Owner User", description="The owner of the product listing")
+    public: bool = Field(True, title="Public", description="Whether the product listing is public")
 
     @field_validator("rating")
     def validate_rating(cls, value):
