@@ -16,14 +16,6 @@ import sqlite3
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
-# listing = Listing(id='0', title="Product 1", description="Product 1 Description", category="Category 1", basePrice=10,
-#                   multipleSKUs=True, addedAt=10000000, views=100, rating=4.5,
-#                   ownerUser=User(id='0', username="User 1", profileURL='http://meow.com',
-#                                  profilePictureURL="http://profile.com",
-#                                  bannerURL="http://banner.com", description="User 1 Description",
-#                                  joinedAt=1000000000)
-#                   )
-
 
 @router.api_route("/", methods=['GET', 'HEAD', 'OPTIONS'], response_model=ListingResponses.Listings)
 async def getListings(conn: sqlite3.Connection = Depends(getDBSession),

@@ -11,12 +11,11 @@ class SKU(BaseModel):
     Product SKU/Variant
     """
     id: int = Field(..., title="Product SKU", description="The SKU of the product")
-    title: str = Field(..., title="Product TitleŸ", description="The title of the product SKU", max_length=50)
+    title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=100)
     images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
     price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
-
 
     @classmethod
     @field_validator("price")
@@ -92,6 +91,17 @@ class ListingWithSales(Listing):
     skus: List[SKUWithStock] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
     sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
     revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
+
+
+class BaseListing(BaseModel):
+    """
+    Base Listing for creating a new listing
+    """
+    title: str = Field(..., title="Product Title", description="The title of the product listing")
+    description: str = Field('', title="Product Description", description="The description of the product listing")
+    subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
+    category: str = Field(..., title="Product Category", description="The category of the product listing")
+    public: bool = Field(True, title="Public", description="Whether the product listing is public")
 
 
 class Response:

@@ -202,7 +202,8 @@ class Queries:
             """
             query = listingBaseQuery + """
             FROM listings Li
-            WHERE Li.id IN ({})
+            WHERE Li.id IN ({}) AND
+            Li.public = 1
             """.format(','.join('?' * len(listingIDs)))
 
             with conn as connection:
@@ -219,6 +220,7 @@ class Queries:
             query = listingBaseQuery + """                        
             FROM listings Li
             WHERE Li.id = ?
+            AND Li.public = 1
             """
 
             with conn as connection:
@@ -233,6 +235,7 @@ class Queries:
             query = listingBaseQuery + """
             FROM listings Li
             WHERE Li.ownerID = ?
+            AND Li.public = 1
             """
 
             with conn as connection:
