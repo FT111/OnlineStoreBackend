@@ -63,7 +63,7 @@ def createListing(conn: callable, baseListing: BaseListing, user: User) -> Listi
 
 	Queries.Listings.addListing(conn, listing)
 
-	return Listing(**dbListing)
+	return listing
 
 
 def getAllCategories(conn: callable) -> List[Category]:
