@@ -44,7 +44,7 @@ class Listing(BaseModel):
     Product Listing, can contain multiple SKUs
     """
 
-    id: Optional[int] = Field(..., title="Product ID", description="The ID of the product listing")
+    id: Union[str, int] = Field(..., title="Product ID", description="The ID of the product listing")
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
     subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
@@ -55,7 +55,7 @@ class Listing(BaseModel):
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
     addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
-    ownerUser: Optional[User] = Field(..., title="Owner User", description="The owner of the product listing")
+    ownerUser: Optional[Union[User, Dict]] = Field(..., title="Owner User", description="The owner of the product listing")
     public: bool = Field(True, title="Public", description="Whether the product listing is public")
 
     @field_validator("rating")
@@ -95,13 +95,14 @@ class ListingWithSales(Listing):
 
 class BaseListing(BaseModel):
     """
-    Base Listing for creating a new listing
+    Base Listing for creating a new listing.
+    Contains the minimum data required for a listing.
     """
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field('', title="Product Description", description="The description of the product listing")
     subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
-    public: bool = Field(True, title="Public", description="Whether the product listing is public")
+    public: bool = Field(False, title="Public", description="Whether the product listing is public")
 
 
 class Response:

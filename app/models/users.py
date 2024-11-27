@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass
 
 from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field_validator
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
@@ -7,6 +8,16 @@ from typing_extensions import Annotated
 import regex as re
 
 from app.models.response import ResponseSchema
+
+
+@dataclass
+class JWTUser:
+    """
+    Model used to store JWT and user data in a JWT
+    """
+    id: str
+    email: str
+    expiry: int
 
 
 class User(BaseModel):
