@@ -58,8 +58,8 @@ def createListing(conn: callable, baseListing: BaseListing, user: User) -> Listi
 					  id=str(uuid4()),
 					  views=0,
 					  rating=0,
-					  addedAt=int(time.time()),
-					  public=False)
+					  addedAt=int(time.time())
+					  )
 
 	Queries.Listings.addListing(conn, listing)
 

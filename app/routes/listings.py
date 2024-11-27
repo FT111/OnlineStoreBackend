@@ -50,9 +50,8 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
 @router.post("/", response_model=ListingResponses.Listing)
 async def createListing(listing: BaseListing,
-                        user: JWTUser = Depends(userRequired),
-                        conn: sqlite3.Connection = Depends(getDBSession),
-                        conn2: sqlite3.Connection = Depends(getDBSession)):
+                        user=Depends(userRequired),
+                        conn: sqlite3.Connection = Depends(getDBSession)):
     """
     Create a new listing.
     Requires an authentication token in the header.
@@ -64,10 +63,10 @@ async def createListing(listing: BaseListing,
     """
 
     # Get the user from the database
-    user: User = data.getUserByID(conn, user.id)
+    user: User = data.getUserByID(getDBSession(), user['id'])
 
     # Create the listing
-    listing: Listing = data.createListing(conn2, listing, user)
+    listing: Listing = data.createListing(conn, listing, user)
 
     # Prepare the listing for the response
     listing: ListingWithSKUs = ListingWithSKUs(**dict(listing),

@@ -171,7 +171,7 @@ class Queries:
                 INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
                 VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
                 """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
-                      listing.addedAt, 0, 0, listing.subCategory))
+                      listing.addedAt, 0, 0, listing.subCategory,))
                 connection.commit()
 
         @staticmethod
