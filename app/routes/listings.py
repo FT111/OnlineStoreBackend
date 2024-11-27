@@ -3,9 +3,9 @@ from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, BaseListing
+from ..models.listings import Listing, BaseListing, ListingWithSKUs
 from ..models.listings import Response as ListingResponses
-from ..models.users import User, PrivilegedUser
+from ..models.users import User, PrivilegedUser, JWTUser
 from ..functions.auth import userRequired
 import app.functions.data as data
 
@@ -50,14 +50,30 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
 @router.post("/", response_model=ListingResponses.Listing)
 async def createListing(listing: BaseListing,
-                        user: User = Depends(userRequired),
-                        conn: sqlite3.Connection = Depends(getDBSession)):
-    if not listing:
-        raise HTTPException(status_code=400, detail="Invalid listing")
+                        user: JWTUser = Depends(userRequired),
+                        conn: sqlite3.Connection = Depends(getDBSession),
+                        conn2: sqlite3.Connection = Depends(getDBSession)):
+    """
+    Create a new listing.
+    Requires an authentication token in the header.
+    :param listing:
+    :param user:
+    :param conn:
+    :param conn2:
+    :return:
+    """
 
-    listing = data.createListing(conn, listing, user)
+    # Get the user from the database
+    user: User = data.getUserByID(conn, user.id)
 
-    return ListingResponses.Listing(meta={"id": "0"}, data=listing)
+    # Create the listing
+    listing: Listing = data.createListing(conn2, listing, user)
+
+    # Prepare the listing for the response
+    listing: ListingWithSKUs = ListingWithSKUs(**dict(listing),
+                                               skus=[])
+
+    return ListingResponses.Listing(meta={"id": listing.id}, data=listing)
 
 
 @router.get("/{listingID}", response_model=ListingResponses.Listing)
