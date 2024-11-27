@@ -1,3 +1,5 @@
+import time
+
 import bcrypt
 import pydantic
 import json
@@ -9,7 +11,7 @@ from typing_extensions import Annotated
 from uuid import uuid4
 
 from app.models.users import User, PrivilegedUser, UserDetail
-from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs
+from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, BaseListing
 from app.models.categories import Category, SubCategory
 
 from app.database.databaseQueries import Queries
@@ -41,19 +43,25 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
 	return modelListings
 
 
-def createListing(conn: callable, listing: Listing, user: User) -> Listing:
+def createListing(conn: callable, baseListing: BaseListing, user: User) -> Listing:
 	"""
 	Adds a listing to the database
 	:param conn: Database connection
-	:param listing: Listing Pydantic model, assumed to be valid
+	:param baseListing: Basic User Pydantic model
 	:param user: The user creating the listing
 	:return:
 	"""
 
-	dbListing = dict(listing)
-	dbListing['id'] = str(uuid4())
+	# Prepares the listing for the database
+	listing = Listing(**dict(baseListing),
+					  ownerUser=user,
+					  id=str(uuid4()),
+					  views=0,
+					  rating=0,
+					  addedAt=int(time.time()),
+					  public=False)
 
-	Queries.Listings.addListing(conn, dbListing)
+	Queries.Listings.addListing(conn, listing)
 
 	return Listing(**dbListing)
 
