@@ -3,6 +3,8 @@ from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
+from app.models.listings import Listing
+
 listingBaseQuery = """
             SELECT
                    Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
@@ -153,6 +155,25 @@ class Queries:
                 return user
 
     class Listings:
+        @staticmethod
+        def addListing(conn, listing: Listing):
+            """
+            Add a listing to the database
+
+            :param conn:
+            :param listing:
+            :return:
+            """
+
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
+                VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
+                """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
+                      listing.addedAt, 0, 0, listing.subCategory))
+                connection.commit()
+
         @staticmethod
         def getListingIDsByUsername(conn: callable, username: str) -> List[int]:
             """
