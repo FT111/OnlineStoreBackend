@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing
+from ..models.listings import Listing, BaseListing
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser
 from ..functions.auth import userRequired
@@ -49,12 +49,13 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
 
 @router.post("/", response_model=ListingResponses.Listing)
-async def createListing(listing: Listing,
+async def createListing(listing: BaseListing,
+                        user: User = Depends(userRequired),
                         conn: sqlite3.Connection = Depends(getDBSession)):
     if not listing:
         raise HTTPException(status_code=400, detail="Invalid listing")
 
-    listing = data.createListing(conn, listing)
+    listing = data.createListing(conn, listing, user)
 
     return ListingResponses.Listing(meta={"id": "0"}, data=listing)
 
