@@ -6,7 +6,7 @@ from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
 from ..functions import data
-from ..functions.auth import userRequired
+from ..functions.auth import userRequired, userOptional
 from ..models.users import User, PrivilegedUser, UserSubmission
 from ..models.users import Response as UserResponse
 from ..models.listings import Response as ListingResponses
@@ -49,16 +49,23 @@ async def newUser(
 @router.get('/{userID}', response_model=UserResponse.User)
 async def getUser(
 		userID: str,
+		includePrivileged: bool = False,
+		user: Dict = Depends(userOptional),
 		conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
 	Get a user by their ID
+	:param user:
+	:param includePrivileged: Whether to include private information
 	:param userID: A user's id
 	:param conn: SQL DB connection
 	:return: 404 or the user
 	"""
 
 	# Queries the database for the user
-	user = data.getUserByID(conn, userID)
+	if includePrivileged and user and user['id'] == userID:
+		user = data.getUserByID(conn, userID, includePrivileged=True)
+	else:
+		user = data.getUserByID(conn, userID)
 	# Return a 404 if the user is not found
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
@@ -70,16 +77,23 @@ async def getUser(
 @router.get('/{userID}/listings', response_model=ListingResponses.Listings)
 async def getUserListings(
 		userID: str,
+		includePrivileged: bool = False,
+		user: Dict = Depends(userOptional),
 		conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
 	Get all listings by a user.
 	:param userID: A user's id
+	:param includePrivileged: Whether to include private information
 	:param conn: SQL DB connection
+	:param user:
 	:return: 404 or the user's listings
 	"""
 
 	# Queries the database for the user's listings
-	listings = data.getListingsByUserID(conn, userID)
+	if includePrivileged and user and user['id'] == userID:
+		listings = data.getListingsByUserID(conn, userID, includePrivileged=True)
+	else:
+		listings = data.getListingsByUserID(conn, userID)
 	# Return a 404 if the user is not found
 	if not listings:
 		raise HTTPException(status_code=404, detail="User not found")

@@ -251,13 +251,13 @@ class Queries:
                 return listing
 
         @staticmethod
-        def getListingsByUserID(conn, userID):
+        def getListingsByUserID(conn, userID,
+                                includePrivileged=False):
 
-            query = listingBaseQuery + """
+            query = listingBaseQuery + f"""
             FROM listings Li
             WHERE Li.ownerID = ?
-            AND Li.public = 1
-            """
+            """ + ("" if includePrivileged else "AND Li.public = 1")
 
             with conn as connection:
                 cursor = connection.cursor()

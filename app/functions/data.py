@@ -100,7 +100,9 @@ def getCategory(conn: callable, title: str) -> Category:
 	return category
 
 
-def getUserByID(conn: callable, userID: str, requestUser: Union[dict, None] = None) -> Union[User, None]:
+def getUserByID(conn: callable, userID: str,
+				requestUser: Union[dict, None] = None,
+				includePrivileged: bool = False) -> Union[User, None]:
 	"""
 	Get a user by their ID
 
@@ -148,15 +150,16 @@ def createUser(conn: callable,
 	return PrivilegedUser(**dbUser)
 
 
-def getListingsByUserID(conn, userID):
+def getListingsByUserID(conn, userID, includePrivileged=False):
 	"""
 	Get all listings by a user
+	:param includePrivileged: Whether to include private information
 	:param conn: Database connection
 	:param userID: User's ID
 	:return: List of listings
 	"""
 
-	listings = Queries.Listings.getListingsByUserID(conn, userID)
+	listings = Queries.Listings.getListingsByUserID(conn, userID, includePrivileged=includePrivileged)
 	castedListings = formatListingRows(listings)
 
 	modelListings = [Listing(**dict(listing)) for listing in castedListings]
