@@ -85,13 +85,13 @@ def userRequired(request: Request) -> dict:
     return request.state.user
 
 
-def userOptional(request: Request) -> Union[dict, bool]:
+def userOptional(request: Request) -> Union[dict, None]:
     """
     Dependency for using user information if available
     """
 
     if not request.state.user:
-        return False
+        return None
 
     return request.state.user
 
