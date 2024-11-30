@@ -234,19 +234,25 @@ class Queries:
                 return listing
 
         @staticmethod
-        def getListingByID(conn: callable, listingID: str) -> sqlite3.Row:
+        def getListingByID(conn: callable, listingID: str,
+                           includePrivileged: bool = False,
+                           requestUserID=None) -> sqlite3.Row:
             """
-            Get a listing by its ID, With associated SKUs
+            Get a listing by its ID, with associated SKUs
             """
-            query = listingBaseQuery + """                        
+            query = listingBaseQuery + f"""                        
             FROM listings Li
             WHERE Li.id = ?
-            AND Li.public = 1
+            AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
             """
 
             with conn as connection:
                 cursor = connection.cursor()
-                cursor.execute(query, (listingID,))
+                # Allow listing owners to view their own private listings
+                if includePrivileged:
+                    cursor.execute(query, (listingID, requestUserID))
+                else:
+                    cursor.execute(query, (listingID,))
                 listing = cursor.fetchone()
                 return listing
 

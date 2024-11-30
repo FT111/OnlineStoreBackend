@@ -159,7 +159,7 @@ def getListingsByUserID(conn, userID, includePrivileged=False):
 	:return: List of listings
 	"""
 
-	listings = Queries.Listings.getListingsByUserID(conn, userID, includePrivileged=includePrivileged)
+	listings = Queries.Listings.getListingsByUserID(conn, userID, includePrivileged=includePrivileged, )
 	castedListings = formatListingRows(listings)
 
 	modelListings = [Listing(**dict(listing)) for listing in castedListings]
@@ -167,15 +167,25 @@ def getListingsByUserID(conn, userID, includePrivileged=False):
 	return modelListings
 
 
-def getListingByID(conn, listingID):
+def getListingByID(conn, listingID,
+				   includePrivileged=False, user: Union[User, None] = None):
 	"""
 	Get a listing by its ID
+	:param includePrivileged:
+	:param user:
 	:param conn: Database connection
 	:param listingID: Listing's ID
 	:return: Listing
 	"""
 
-	listing = Queries.Listings.getListingByID(conn, listingID)
+	listing = None
+	if not includePrivileged:
+		listing = Queries.Listings.getListingByID(conn, listingID)
+	elif user is not None:
+		listing = Queries.Listings.getListingByID(conn, listingID, includePrivileged=True, requestUserID=user['id'])
+	if listing is None:
+		raise NameError(f'Listing with id \'{listingID}\' not found')
+
 	castedListing = formatListingRows([listing])[0]
 	print('Listing:', castedListing)
 
@@ -185,6 +195,9 @@ def getListingByID(conn, listingID):
 
 
 def formatListingRows(listings):
+	if listings[0] is None:
+		return []
+
 	castedListings = []
 	for listing in listings:
 		listingDict = dict(listing)

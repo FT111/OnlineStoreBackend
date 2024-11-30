@@ -6,7 +6,7 @@ from ..database.database import getDBSession
 from ..models.listings import Listing, BaseListing, ListingWithSKUs
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser, JWTUser
-from ..functions.auth import userRequired
+from ..functions.auth import userRequired, userOptional
 import app.functions.data as data
 
 import app.instances as instances
@@ -78,9 +78,17 @@ async def createListing(listing: BaseListing,
 @router.get("/{listingID}", response_model=ListingResponses.Listing)
 async def getListing(
         listingID: str,
+        includePrivileged: bool = False,
+        user: Optional[Dict] = Depends(userOptional),
         conn: sqlite3.Connection = Depends(getDBSession)):
 
-    listingObj = data.getListingByID(conn, listingID)
+    try:
+        if includePrivileged and user:
+            listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
+        else:
+            listingObj = data.getListingByID(conn, listingID)
+    except NameError:
+        raise HTTPException(status_code=404, detail="Listing not found")
 
     return ListingResponses.Listing(meta={"id": listingID}, data=listingObj)
 
