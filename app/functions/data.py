@@ -183,6 +183,7 @@ def getListingByID(conn, listingID,
 		listing = Queries.Listings.getListingByID(conn, listingID)
 	elif user is not None:
 		listing = Queries.Listings.getListingByID(conn, listingID, includePrivileged=True, requestUserID=user['id'])
+
 	if listing is None:
 		raise NameError(f'Listing with id \'{listingID}\' not found')
 

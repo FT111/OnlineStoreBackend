@@ -83,10 +83,7 @@ async def getListing(
         conn: sqlite3.Connection = Depends(getDBSession)):
 
     try:
-        if includePrivileged and user:
-            listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
-        else:
-            listingObj = data.getListingByID(conn, listingID)
+        listingObj = data.getListingByID(conn, listingID, includePrivileged=includePrivileged, user=user)
     except NameError:
         raise HTTPException(status_code=404, detail="Listing not found")
 
