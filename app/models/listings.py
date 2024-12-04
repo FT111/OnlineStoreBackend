@@ -104,6 +104,18 @@ class BaseListing(BaseModel):
     category: str = Field(..., title="Product Category", description="The category of the product listing")
     public: bool = Field(False, title="Public", description="Whether the product listing is public")
 
+    @field_validator("title")
+    def validate_title(cls, value):
+        if len(value) < 1 or len(value) > 40:
+            raise ValueError('Title must be between 1 and 40 characters')
+        return value
+
+    @field_validator("description")
+    def validate_description(cls, value):
+        if len(value) > 100:
+            raise ValueError('Description must be less than 100 characters')
+        return value
+
 
 class Response:
     """

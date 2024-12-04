@@ -61,6 +61,19 @@ class PrivilegedUser(UserDetail):
             raise ValueError('Invalid email address')
         return value
 
+    @classmethod
+    @field_validator("firstName")
+    def validate_firstName(cls, value):
+        if not re.match(r"[a-zA-Z]+", value):
+            raise ValueError('First name must only contain letters')
+        return value
+
+    @field_validator("surname")
+    def validate_surname(cls, value):
+        if not re.match(r"[a-zA-Z]+", value):
+            raise ValueError('Surname must only contain letters')
+        return value
+
 
 class UserSubmission(PrivilegedUser):
     """
