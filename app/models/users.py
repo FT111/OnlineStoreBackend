@@ -59,19 +59,23 @@ class PrivilegedUser(UserDetail):
     def validate_email(cls, value):
         if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
             raise ValueError('Invalid email address')
+        if not len(value) > 0:
+            raise ValueError('Email must not be empty')
+        if not len(value) <= 320:
+            raise ValueError('Email must be less than or equal to 320 characters')
         return value
 
     @classmethod
     @field_validator("firstName")
     def validate_firstName(cls, value):
-        if not re.match(r"[a-zA-Z]+", value):
-            raise ValueError('First name must only contain letters')
+        if not len(value) > 0:
+            raise ValueError('Name must not be empty')
         return value
 
     @field_validator("surname")
     def validate_surname(cls, value):
-        if not re.match(r"[a-zA-Z]+", value):
-            raise ValueError('Surname must only contain letters')
+        if not len(value) > 0:
+            raise ValueError('Surname must not be empty')
         return value
 
 

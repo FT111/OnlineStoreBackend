@@ -16,6 +16,7 @@ class SKU(BaseModel):
                              description="The short description of the product SKU", max_length=100)
     images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
     price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
+    discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
 
     @classmethod
     @field_validator("price")
@@ -113,7 +114,7 @@ class BaseListing(BaseModel):
     @field_validator("description")
     def validate_description(cls, value):
         if len(value) > 100:
-            raise ValueError('Description must be less than 100 characters')
+            raise ValueError('Description must be less than 200 characters')
         return value
 
 
