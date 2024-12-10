@@ -14,14 +14,14 @@ class SKU(BaseModel):
     title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
     description: str = Field(..., title="Product Description",
                              description="The short description of the product SKU", max_length=100)
-    images: Optional[List[str]] = Field(None, title="Product Images", description="The images of the product SKU")
+    images: List[str] = Field([], title="Product Images", description="The images of the product SKU")
     price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
 
     @classmethod
     @field_validator("price")
     def validate_price(cls, value):
-        if value < 0:
+        if value <= 0:
             raise ValueError('Price must be greater than 0')
         return value
 
@@ -90,8 +90,8 @@ class ListingWithSales(Listing):
     Contains private data, inherits from Listing. For sellers
     """
     skus: List[SKUWithStock] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
-    sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
-    revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
+    # sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
+    # revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 
 
 class BaseListing(BaseModel):

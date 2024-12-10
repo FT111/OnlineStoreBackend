@@ -58,7 +58,6 @@ async def createListing(listing: BaseListing,
     :param listing:
     :param user:
     :param conn:
-    :param conn2:
     :return:
     """
 
@@ -83,7 +82,10 @@ async def getListing(
         conn: sqlite3.Connection = Depends(getDBSession)):
 
     try:
-        listingObj = data.getListingByID(conn, listingID, includePrivileged=includePrivileged, user=user)
+        if includePrivileged and user:
+            listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
+        else:
+            listingObj = data.getListingByID(conn, listingID)
     except NameError:
         raise HTTPException(status_code=404, detail="Listing not found")
 

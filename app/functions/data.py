@@ -190,12 +190,20 @@ def getListingByID(conn, listingID,
 	castedListing = formatListingRows([listing])[0]
 	print('Listing:', castedListing)
 
-	modelListing = ListingWithSKUs(**dict(castedListing))
+	if not includePrivileged:
+		modelListing = ListingWithSKUs(**dict(castedListing))
+	else:
+		modelListing = ListingWithSales(**dict(castedListing))
 
 	return modelListing
 
 
 def formatListingRows(listings):
+	"""
+	Formats listings from the database into a usable dictionary from JSON
+	:param listings: List of listings
+	:return:
+	"""
 	if listings[0] is None:
 		return []
 
@@ -204,6 +212,6 @@ def formatListingRows(listings):
 		listingDict = dict(listing)
 		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
 		listingDict['skus'] = json.loads(listingDict['skus'])
-		listingDict['skus'] = [SKU(**sku) for sku in listingDict['skus']]
+		listingDict['skus'] = [dict(**sku) for sku in listingDict['skus']]
 		castedListings.append(listingDict)
 	return castedListings

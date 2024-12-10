@@ -42,7 +42,9 @@ listingBaseQuery = """
                                'id', Sk.id,
                                'title', Sk.title,
                                'description', Sk.description,
-                               'price', Sk.price
+                               'price', Sk.price,
+                               'discount', Sk.discount,
+                               'stock', Sk.stock
                            )
                        )
                        FROM skus Sk
@@ -177,7 +179,7 @@ class Queries:
         @staticmethod
         def getListingIDsByUsername(conn: callable, username: str) -> List[int]:
             """
-            Get a list of listing IDs by a user name
+            Get a list of listing IDs by a username
             """
             with conn as connection:
                 cursor = connection.cursor()
@@ -240,7 +242,7 @@ class Queries:
             """
             Get a listing by its ID, with associated SKUs
             """
-            query = listingBaseQuery + f"""                        
+            query = listingBaseQuery + f"""
             FROM listings Li
             WHERE Li.id = ?
             AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}

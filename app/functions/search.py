@@ -245,9 +245,11 @@ class ListingSearch(Search):
 
 		scores = self.queryDocuments(query, category, subCategory)
 
+		# Get the full listings from the listingID scores
 		listings = data.idsToListings(conn, [score[0] for score in scores])
 		# Get the rows of the top results
 		listings = self.sortListings(listings, sort, order)
+		# Paginate the results
 		topListings = listings[offset:offset + limit]
 
 		return len(listings), topListings
