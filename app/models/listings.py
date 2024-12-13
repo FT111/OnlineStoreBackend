@@ -89,7 +89,7 @@ class ListingWithSales(Listing):
     """
     Contains private data, inherits from Listing. For sellers
     """
-    skus: List[SKUWithStock] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
+    skus: List[Optional[SKUWithStock]] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
     # sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
     # revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 

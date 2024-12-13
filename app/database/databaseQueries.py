@@ -6,83 +6,51 @@ from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, Li
 from app.models.listings import Listing
 
 listingBaseQuery = """
-            SELECT
-                   Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
-
-                   (
-                        SELECT Ca.title
-                        FROM categories Ca
-                        WHERE Ca.id = (
-                            SELECT sCa.categoryID
-                            FROM subCategories sCa
-                            WHERE sCa.id = Li.subCategoryID
-                        )
-                   ) AS category,
-                    (
-                       SELECT sCa.title
-                        FROM subCategories sCa
-                        WHERE sCa.id = Li.subCategoryID
-                   ) AS subCategory,
-                   (
-                       SELECT json_object(
-                           'id', Us.id,
-                           'username', Us.username,
-                           'profileURL', '/users/' || Us.id,
-                           'profilePictureURL', Us.profilePictureURL,
-                           'bannerURL', Us.bannerURL,
-                           'description', Us.description,
-                           'joinedAt', Us.joinedAt
-                       )
-                       FROM users Us
-                       WHERE Us.id = Li.ownerID
-                   ) AS ownerUser,
-                   (
-                       SELECT json_group_array(
-                           json_object(
-                               'id', Sk.id,
-                               'title', Sk.title,
-                               'description', Sk.description,
-                               'price', Sk.price,
-                               'discount', Sk.discount,
-                               'stock', Sk.stock
-                           )
-                       )
-                       FROM skus Sk
-                       WHERE Sk.listingID = Li.id
-                   ) AS skus,
-
-                   (
-                       SELECT min(Sk.price * (1 - Sk.discount / 100.0))
-                       FROM skus Sk
-                       WHERE Sk.listingID = Li.id
-                   ) AS basePrice,
-
-
-                    (
-                       SELECT CASE
-                           WHEN EXISTS (
-                               SELECT 1
-                               FROM skus Sk
-                               WHERE Sk.listingID = Li.id AND Sk.discount > 0
-                           ) THEN 1
-                           ELSE 0
-                       END
-                   ) AS hasDiscount,
-
-                    (
-                        SELECT CASE
-                            WHEN count(*) > 1 THEN 1
-                            ELSE 0
-                        END
-                        FROM skus Sk
-                        WHERE Sk.listingID = Li.id
-                    ) AS multipleSKUs,
-
-                   (
-                       SELECT count(*)
-                       FROM listingEvents Ev
-                       WHERE Ev.eventType = 'view' AND Ev.listingID = Li.id
-                   ) AS views
+SELECT
+    Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
+    Ca.title AS category,
+    sCa.title AS subCategory,
+    json_object(
+        'id', Us.id,
+        'username', Us.username,
+        'profileURL', '/users/' || Us.id,
+        'profilePictureURL', Us.profilePictureURL,
+        'bannerURL', Us.bannerURL,
+        'description', Us.description,
+        'joinedAt', Us.joinedAt
+    ) AS ownerUser,
+    json_group_array(
+        json_object(
+            'id', Sk.id,
+            'title', Sk.title,
+            'description', Sk.description,
+            'price', Sk.price,
+            'discount', Sk.discount,
+            'stock', Sk.stock
+        )
+    ) AS skus,
+    min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
+    CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM skus Sk
+            WHERE Sk.listingID = Li.id AND Sk.discount > 0
+        ) THEN 1
+        ELSE 0
+    END AS hasDiscount,
+    CASE
+        WHEN count(Sk.id) > 1 THEN 1
+        ELSE 0
+    END AS multipleSKUs,
+    count(Ev.id) AS views
+FROM listings Li
+LEFT JOIN subCategories sCa ON sCa.id = Li.subCategoryID
+LEFT JOIN categories Ca ON Ca.id = sCa.categoryID
+LEFT JOIN users Us ON Us.id = Li.ownerID
+LEFT JOIN skus Sk ON Sk.listingID = Li.id
+LEFT JOIN listingEvents Ev ON Ev.listingID = Li.id AND Ev.eventType = 'view'
+{}
+GROUP BY Li.id, Ca.title, sCa.title, Us.id
             """
 
 
@@ -223,11 +191,10 @@ class Queries:
             """
             Get a listing by its ID
             """
-            query = listingBaseQuery + """
-            FROM listings Li
-            WHERE Li.id IN ({}) AND
-            Li.public = 1
-            """.format(','.join('?' * len(listingIDs)))
+            query = listingBaseQuery.format("""
+                WHERE Li.id IN ({}) AND
+                Li.public = 1
+                """.format(','.join('?' * len(listingIDs))))
 
             with conn as connection:
                 cursor = connection.cursor()
@@ -242,11 +209,10 @@ class Queries:
             """
             Get a listing by its ID, with associated SKUs
             """
-            query = listingBaseQuery + f"""
-            FROM listings Li
+            query = listingBaseQuery.format(f"""
             WHERE Li.id = ?
             AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
-            """
+            """)
 
             with conn as connection:
                 cursor = connection.cursor()
@@ -262,10 +228,9 @@ class Queries:
         def getListingsByUserID(conn, userID,
                                 includePrivileged=False):
 
-            query = listingBaseQuery + f"""
-            FROM listings Li
+            query = listingBaseQuery.format(f"""
             WHERE Li.ownerID = ?
-            """ + ("" if includePrivileged else "AND Li.public = 1")
+            """ + ("" if includePrivileged else "AND Li.public = 1"))
 
             with conn as connection:
                 cursor = connection.cursor()
