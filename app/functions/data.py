@@ -11,7 +11,7 @@ from typing_extensions import Annotated
 from uuid import uuid4
 
 from app.models.users import User, PrivilegedUser, UserDetail
-from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, BaseListing
+from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, BaseListing, SKUWithStock
 from app.models.categories import Category, SubCategory
 
 from app.database.databaseQueries import Queries
@@ -187,6 +187,7 @@ def getListingByID(conn, listingID,
 	if listing is None:
 		raise NameError(f'Listing with id \'{listingID}\' not found')
 
+	print('Uncasted Listing:', dict(listing))
 	castedListing = formatListingRows([listing])[0]
 	print('Listing:', castedListing)
 
@@ -211,7 +212,11 @@ def formatListingRows(listings):
 	for listing in listings:
 		listingDict = dict(listing)
 		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
-		listingDict['skus'] = json.loads(listingDict['skus'])
-		listingDict['skus'] = [dict(**sku) for sku in listingDict['skus']]
+		try:
+			listingDict['skus'] = [SKUWithStock(**sku) for sku in json.loads(listingDict['skus'])]
+		except pydantic.ValidationError:
+			listingDict['skus'] = []
+
+		# listingDict['skus'] = [dict(**sku) for sku in listingDict['skus']]
 		castedListings.append(listingDict)
 	return castedListings
