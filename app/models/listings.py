@@ -25,6 +25,23 @@ class SKU(BaseModel):
             raise ValueError('Price must be greater than 0')
         return value
 
+    @classmethod
+    @field_validator("discount")
+    def validate_discount(cls, value):
+        if value is not None and (value < 1 or value > 99):
+            raise ValueError('Discount must be between 1 and 99')
+        return value
+
+    def __init__(self, *args, **data):
+        super().__init__()
+        # Sanitise image names
+        for count, image in enumerate(self.images):
+            imgName = str(image).strip().replace(" ", "_")
+            imgName = re.sub(r"(?u)[^-\w.]", "", imgName)
+            if imgName in {"", ".", "..", "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7"}:
+                raise NameError("Invalid image name")
+            self.images[count] = imgName
+
 
 class SKUWithStock(SKU):
     """
