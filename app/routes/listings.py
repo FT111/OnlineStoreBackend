@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from typing_extensions import Annotated, Union, Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, BaseListing, ListingWithSKUs
+from ..models.listings import Listing, BaseListing, ListingWithSKUs, SKUWithStock
 from ..models.listings import Response as ListingResponses
 from ..models.users import User, PrivilegedUser, JWTUser
 from ..functions.auth import userRequired, userOptional
@@ -93,5 +93,28 @@ async def getListing(
 
 
 @router.put("/{listingID}")
-async def updateListing(listingFields: Listing):
-    return listingFields
+async def updateListing(listing: ListingWithSKUs,
+                        user=Depends(userRequired),
+                        conn: sqlite3.Connection = Depends(getDBSession)):
+
+    if user['id'] != listing.ownerUser.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this listing")
+
+    data.updateListing(conn, listing)
+
+    return ListingResponses.Listing(meta={"id": listing.id},
+                                    data=listing)
+
+
+@router.put("/{listingID}/{skuID}")
+async def updateSKU(sku: SKUWithStock,
+                    user=Depends(userRequired),
+                    conn: sqlite3.Connection = Depends(getDBSession)):
+
+    try:
+        data.updateSKU(conn, sku)
+    except NameError as e:
+        raise HTTPException(status_code=404, detail=f"SKU not found")
+
+    return ListingResponses.SKU(meta={"id": sku.id},
+                                data=sku)

@@ -1,8 +1,9 @@
 import time
+import json
+import base64
 
 import bcrypt
 import pydantic
-import json
 
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
 
@@ -199,6 +200,53 @@ def getListingByID(conn, listingID,
 	return modelListing
 
 
+def updateListing(conn, listing: ListingWithSKUs):
+	"""
+	Update a listing
+	:param conn: Database connection
+	:param listing: Listing Pydantic model
+	:return:
+	"""
+
+	Queries.Listings.updateListing(conn, listing)
+
+	return listing
+
+
+def updateSKU(conn, sku: SKUWithStock):
+	"""
+	Update a SKU
+	:param conn: Database connection
+	:param sku: SKU Pydantic model
+	:return:
+	"""
+
+	# Save new images to the filesystem
+	for index, image in enumerate(sku.images):
+		# If the image is a base64 string, save it to the filesystem
+		if image.startswith('data:image'):
+			# Remove the base64 header
+			image = image.split('base64,')[1]
+
+			# Save the image to the filesystem
+			filename = f"sku-{sku.id}-{index}.jpeg"
+			with open(f"app/static/listingImages/{filename}", 'wb') as file:
+				file.write(base64.decodebytes(image.encode('utf-8')))
+			sku.images[index] = filename
+			continue
+
+		# If the image is an existing filepath, keep it
+		if image.startswith('sku-'):
+			continue
+
+		# Remove the image if it isn't a base64 string or filepath
+		del sku.images[index]
+
+	Queries.Listings.updateSKU(conn, sku)
+
+	return sku
+
+
 def formatListingRows(listings):
 	"""
 	Formats listings from the database into a usable dictionary from JSON
@@ -212,9 +260,15 @@ def formatListingRows(listings):
 	for listing in listings:
 		listingDict = dict(listing)
 		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
+
+		# Convert the SKUs from JSON to a list of SKU objects
+		# Uses the SKUWithStock model to store the most detail
+		# Can be converted to a SKU model if needed
 		try:
 			listingDict['skus'] = [SKUWithStock(**sku) for sku in json.loads(listingDict['skus'])]
 		except pydantic.ValidationError:
+			# If the SKUs are invalid, return an empty list
+			# Handles the database returning a single invalid SKU if none are present
 			listingDict['skus'] = []
 
 		# listingDict['skus'] = [dict(**sku) for sku in listingDict['skus']]

@@ -3,7 +3,7 @@ from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
-from app.models.listings import Listing
+from app.models.listings import Listing, ListingWithSKUs, SKU
 
 listingBaseQuery = """
 SELECT
@@ -26,8 +26,14 @@ SELECT
             'description', Sk.description,
             'price', Sk.price,
             'discount', Sk.discount,
-            'stock', Sk.stock
-        )
+            'stock', Sk.stock,
+            'images', (
+                SELECT json_group_array(
+                    skIm.id
+                    )
+                FROM skuImages SkIm
+                WHERE SkIm.skuID = Sk.id
+        ))
     ) AS skus,
     min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
     CASE
@@ -142,6 +148,42 @@ class Queries:
                 VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
                 """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
                       listing.addedAt, 0, 0, listing.subCategory,))
+                connection.commit()
+
+        @staticmethod
+        def updateListing(conn: callable, listing: Listing):
+            """
+            Update a listing in the database
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                UPDATE listings
+                SET title = ?, description = ?, public = ?, 
+                subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
+                WHERE id = ?
+                """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
+                connection.commit()
+
+        @staticmethod
+        def updateSKU(conn: callable, sku: SKU):
+            """
+            Update a SKU in the database
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                UPDATE skus
+                SET title = ?, description = ?, price = ?, discount = ?
+                WHERE id = ?
+            
+                """, (sku.title, sku.description, sku.price, sku.discount, sku.id))
+
+                for image in sku.images:
+                    cursor.execute("""
+                    INSERT OR REPLACE INTO skuImages (id, skuID)
+                    VALUES (?, ?)
+                    """, (image, sku.id))
                 connection.commit()
 
         @staticmethod
