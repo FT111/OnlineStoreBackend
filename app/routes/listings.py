@@ -3,7 +3,7 @@ from typing import Dict
 from typing_extensions import Optional
 
 from ..database.database import getDBSession
-from ..models.listings import Listing, BaseListing, ListingWithSKUs, SKUWithStock
+from ..models.listings import Listing, ListingSubmission, ListingWithSKUs, SKUWithStock, SKUSubmission
 from ..models.listings import Response as ListingResponses
 from ..models.users import User
 from ..functions.auth import userRequired, userOptional, verifyListingOwnership
@@ -48,7 +48,7 @@ async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
 
 
 @router.post("/", response_model=ListingResponses.Listing)
-async def createListing(listing: BaseListing,
+async def createListing(listing: ListingSubmission,
                         user=Depends(userRequired),
                         conn: sqlite3.Connection = Depends(getDBSession)):
     """
@@ -122,14 +122,14 @@ async def updateSKU(sku: SKUWithStock,
 
 
 @router.post("/{listingID}/sku")
-async def createSKU(sku: SKUWithStock,
+async def createSKU(sku: SKUSubmission,
                     listingID: str,
                     user=Depends(userRequired),
                     conn: sqlite3.Connection = Depends(getDBSession)):
 
     verifyListingOwnership(listingID, user)
 
-    data.createSKU(conn, sku, listingID)
+    createdSKU = data.createSKU(conn, sku, listingID)
 
-    return ListingResponses.SKU(meta={"id": sku.id},
-                                data=sku)
+    return ListingResponses.SKU(meta={"id": createdSKU.id},
+                                data=createdSKU)

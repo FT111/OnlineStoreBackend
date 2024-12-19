@@ -10,10 +10,8 @@ class SKU(BaseModel):
     """
     Product SKU/Variant
     """
-    id: int = Field(..., title="Product SKU", description="The SKU of the product")
+    id: str = Field(..., title="Product SKU", description="The SKU of the product")
     title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
-    description: str = Field(..., title="Product Description",
-                             description="The short description of the product SKU", max_length=100)
     images: List[str] = Field([], title="Product Images", description="The images of the product SKU")
     price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
@@ -46,13 +44,43 @@ class SKU(BaseModel):
         #         self.images[count] = imgName
 
 
-
-
 class SKUWithStock(SKU):
     """
     Contains stock, inherits from SKU. For sellers
     """
     stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
+
+    @classmethod
+    @field_validator("stock")
+    def validate_stock(cls, value):
+        if value < 0:
+            raise ValueError('Stock must be greater than or equal to 0')
+        return value
+
+
+class SKUSubmission(BaseModel):
+    """
+    SKU Submission Model
+    """
+    title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
+    images: List[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
+    price: str = Annotated[str, Field(..., title="Product Price", description="The price of the product SKU")]
+    discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
+    stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
+
+    @classmethod
+    @field_validator("price")
+    def validate_price(cls, value):
+        if value <= 0:
+            raise ValueError('Price must be greater than 0')
+        return value
+
+    @classmethod
+    @field_validator("discount")
+    def validate_discount(cls, value):
+        if value is not None and (value < 1 or value > 99):
+            raise ValueError('Discount must be between 1 and 99')
+        return value
 
     @classmethod
     @field_validator("stock")
@@ -121,7 +149,7 @@ class ListingWithSales(Listing):
     # revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 
 
-class BaseListing(BaseModel):
+class ListingSubmission(BaseModel):
     """
     Base Listing for creating a new listing.
     Contains the minimum data required for a listing.

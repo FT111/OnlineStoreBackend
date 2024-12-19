@@ -1,2 +1,3 @@
 /testing/
 /app/database/databaseProd.db
+/app/static/*

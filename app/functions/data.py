@@ -12,7 +12,8 @@ from typing_extensions import Annotated
 from uuid import uuid4
 
 from app.models.users import User, PrivilegedUser, UserDetail
-from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, BaseListing, SKUWithStock
+from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, ListingSubmission, SKUWithStock, \
+	SKUSubmission
 from app.models.categories import Category, SubCategory
 
 from app.database.databaseQueries import Queries
@@ -36,7 +37,7 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
 	return formatListingRows(listings)
 
 
-def createListing(conn: callable, baseListing: BaseListing, user: User) -> Listing:
+def createListing(conn: callable, baseListing: ListingSubmission, user: User) -> Listing:
 	"""
 	Adds a listing to the database
 	:param conn: Database connection
@@ -219,7 +220,7 @@ def updateSKU(conn, sku: SKUWithStock):
 	return sku
 
 
-def createSKU(conn, sku: SKUWithStock, listingID: str) -> SKUWithStock:
+def createSKU(conn, sku: SKUSubmission, listingID: str) -> SKUWithStock:
 	"""
 	Create a SKU
 	:param conn: Database connection
@@ -228,10 +229,11 @@ def createSKU(conn, sku: SKUWithStock, listingID: str) -> SKUWithStock:
 	:return:
 	"""
 
-	sku.images = processAndStoreImages(sku.images, sku.id)
-	Queries.Listings.addSKU(conn, sku, listingID)
+	fullSKU = SKUWithStock(**dict(sku), id=str(uuid4()))
+	sku.images = processAndStoreImages(fullSKU.images, fullSKU.id)
+	Queries.Listings.addSKU(conn, fullSKU, listingID)
 
-	return sku
+	return fullSKU
 
 
 def processAndStoreImages(images: list, uniqueID) -> list:
