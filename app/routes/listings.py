@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import List, Dict, Any
-from typing_extensions import Annotated, Union, Optional
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Dict
+from typing_extensions import Optional
 
 from ..database.database import getDBSession
 from ..models.listings import Listing, BaseListing, ListingWithSKUs, SKUWithStock
 from ..models.listings import Response as ListingResponses
-from ..models.users import User, PrivilegedUser, JWTUser
-from ..functions.auth import userRequired, userOptional
+from ..models.users import User
+from ..functions.auth import userRequired, userOptional, verifyListingOwnership
 import app.functions.data as data
 
 import app.instances as instances
 
-import cachetools.func
 import sqlite3
 
 router = APIRouter(prefix="/listings", tags=["listings"])
@@ -108,13 +107,29 @@ async def updateListing(listing: ListingWithSKUs,
 
 @router.put("/{listingID}/{skuID}")
 async def updateSKU(sku: SKUWithStock,
+                    listingID: str,
                     user=Depends(userRequired),
                     conn: sqlite3.Connection = Depends(getDBSession)):
 
-    try:
-        data.updateSKU(conn, sku)
-    except NameError as e:
-        raise HTTPException(status_code=404, detail=f"SKU not found")
+    listing = verifyListingOwnership(listingID, user)
+    if sku.id not in [sku.id for sku in listing.skus]:
+        raise HTTPException(status_code=404, detail="SKU not found")
+
+    data.updateSKU(conn, sku)
+
+    return ListingResponses.SKU(meta={"id": sku.id},
+                                data=sku)
+
+
+@router.post("/{listingID}/sku")
+async def createSKU(sku: SKUWithStock,
+                    listingID: str,
+                    user=Depends(userRequired),
+                    conn: sqlite3.Connection = Depends(getDBSession)):
+
+    verifyListingOwnership(listingID, user)
+
+    data.createSKU(conn, sku, listingID)
 
     return ListingResponses.SKU(meta={"id": sku.id},
                                 data=sku)

@@ -32,16 +32,8 @@ def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
 	"""
 
 	listings = Queries.Listings.getListingsByIDs(conn, listingIDs)
-	castedListings = []
-	for listing in listings:
-		listingDict = dict(listing)
-		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
-		listingDict['skus'] = json.loads(listingDict['skus'])
-		castedListings.append(listingDict)
 
-	modelListings = [Listing(**dict(listing)) for listing in castedListings]
-
-	return modelListings
+	return formatListingRows(listings)
 
 
 def createListing(conn: callable, baseListing: BaseListing, user: User) -> Listing:
@@ -221,18 +213,40 @@ def updateSKU(conn, sku: SKUWithStock):
 	:return:
 	"""
 
+	sku.images = processAndStoreImages(sku.images, sku.id)
+	Queries.Listings.updateSKU(conn, sku)
+
+	return sku
+
+
+def createSKU(conn, sku: SKUWithStock, listingID: str) -> SKUWithStock:
+	"""
+	Create a SKU
+	:param conn: Database connection
+	:param sku: SKU Pydantic model
+	:param listingID: The ID of the listing to add the SKU to
+	:return:
+	"""
+
+	sku.images = processAndStoreImages(sku.images, sku.id)
+	Queries.Listings.addSKU(conn, sku, listingID)
+
+	return sku
+
+
+def processAndStoreImages(images: list, uniqueID) -> list:
 	# Save new images to the filesystem
-	for index, image in enumerate(sku.images):
+	for index, image in enumerate(images):
 		# If the image is a base64 string, save it to the filesystem
 		if image.startswith('data:image'):
 			# Remove the base64 header
 			image = image.split('base64,')[1]
 
 			# Save the image to the filesystem
-			filename = f"sku-{sku.id}-{index}.jpeg"
+			filename = f"sku-{uniqueID}-{index+1}.jpeg"
 			with open(f"app/static/listingImages/{filename}", 'wb') as file:
 				file.write(base64.decodebytes(image.encode('utf-8')))
-			sku.images[index] = filename
+			images[index] = filename
 			continue
 
 		# If the image is an existing filepath, keep it
@@ -240,11 +254,10 @@ def updateSKU(conn, sku: SKUWithStock):
 			continue
 
 		# Remove the image if it isn't a base64 string or filepath
-		del sku.images[index]
+		print(f"Invalid image: {image}")
+		del images[index]
 
-	Queries.Listings.updateSKU(conn, sku)
-
-	return sku
+	return images
 
 
 def formatListingRows(listings):
@@ -260,6 +273,7 @@ def formatListingRows(listings):
 	for listing in listings:
 		listingDict = dict(listing)
 		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
+		listingDict['images'] = json.loads(listingDict['images'])
 
 		# Convert the SKUs from JSON to a list of SKU objects
 		# Uses the SKUWithStock model to store the most detail
