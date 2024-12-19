@@ -3,7 +3,7 @@ from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
-from app.models.listings import Listing, ListingWithSKUs, SKU, SKUWithStock
+from app.models.listings import Listing, ListingWithSKUs, SKU, SKUWithStock, SKUSubmission
 
 listingBaseQuery = """
 SELECT
@@ -19,21 +19,23 @@ SELECT
         'description', Us.description,
         'joinedAt', Us.joinedAt
     ) AS ownerUser,
-    json_group_array(
-        json_object(
-            'id', Sk.id,
-            'title', Sk.title,
-            'description', Sk.description,
-            'price', Sk.price,
-            'discount', Sk.discount,
-            'stock', Sk.stock,
-            'images', (
-                SELECT json_group_array(
-                    skIm.id
-                    )
-                FROM skuImages SkIm
-                WHERE SkIm.skuID = Sk.id
-        ))
+    (
+        SELECT json_group_array(
+            json_object(
+                'id', Sk.id,
+                'title', Sk.title,
+                'price', Sk.price,
+                'discount', Sk.discount,
+                'stock', Sk.stock,
+                'images', (
+                    SELECT json_group_array(skIm.id)
+                    FROM skuImages skIm
+                    WHERE skIm.skuID = Sk.id
+                )
+            )
+        )
+        FROM skus Sk
+        WHERE Sk.listingID = Li.id
     ) AS skus,
     
     json_group_array(
@@ -181,10 +183,10 @@ class Queries:
                 cursor = connection.cursor()
                 cursor.execute("""
                 UPDATE skus
-                SET title = ?, description = ?, price = ?, discount = ?
+                SET title = ?, price = ?, discount = ?
                 WHERE id = ?
             
-                """, (sku.title, sku.description, sku.price, sku.discount, sku.id))
+                """, (sku.title, sku.price, sku.discount, sku.id))
 
                 for image in sku.images:
                     cursor.execute("""
@@ -201,9 +203,9 @@ class Queries:
             with conn as connection:
                 cursor = connection.cursor()
                 cursor.execute("""
-                INSERT INTO skus (id, listingID, title, description, price, discount, stock)
-                VALUES (?,?,?,?,?,?,?)
-                """, (sku.id, listingID, sku.title, sku.description, sku.price, sku.discount, sku.stock))
+                INSERT INTO skus (id, listingID, title, price, discount, stock)
+                VALUES (?,?,?,?,?,?)
+                """, (sku.id, listingID, sku.title, sku.price, sku.discount, sku.stock))
                 connection.commit()
 
         @staticmethod
