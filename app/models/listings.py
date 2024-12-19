@@ -32,15 +32,20 @@ class SKU(BaseModel):
             raise ValueError('Discount must be between 1 and 99')
         return value
 
-    def __init__(self, *args, **data):
-        super().__init__()
-        # Sanitise image names
-        for count, image in enumerate(self.images):
-            imgName = str(image).strip().replace(" ", "_")
-            imgName = re.sub(r"(?u)[^-\w.]", "", imgName)
-            if imgName in {"", ".", "..", "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7"}:
-                raise NameError("Invalid image name")
-            self.images[count] = imgName
+    # def __init__(self, *args, **data):
+    #     super().__init__()
+    #
+        # # Sanitise image names
+        # print(self.images)
+        # if len(self.images) != 0:
+        #     for count, image in enumerate(self.images):
+        #         imgName = str(image).strip().replace(" ", "_")
+        #         imgName = re.sub(r"(?u)[^-\w.]", "", imgName)
+        #         if imgName in {"", ".", "..", "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7"}:
+        #             raise NameError("Invalid image name")
+        #         self.images[count] = imgName
+
+
 
 
 class SKUWithStock(SKU):
@@ -65,15 +70,20 @@ class Listing(BaseModel):
     id: Union[str, int] = Field(..., title="Product ID", description="The ID of the product listing")
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field(..., title="Product Description", description="The description of the product listing")
+    images: List[Optional[str]] = Field([], title="Product Images",
+                                        description="The images of the product listing. List of URLs")
     subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
-    basePrice: Union[str, float, None] = Field('0', title="Product Base Price", description="The base price of the product listing")
+    basePrice: Union[str, float, None] = Field('0', title="Product Base Price",
+                                               description="The base price of the product listing")
+
     hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")
     multipleSKUs: bool = Field(False, title="Multiple SKUs", description="Whether the product listing has multiple SKUs")
     views: int = Field(0, title="Product Views", description="The number of views of the product listing")
     rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
     addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
-    ownerUser: Optional[Union[User, Dict]] = Field(..., title="Owner User", description="The owner of the product listing")
+    ownerUser: Optional[Union[User, Dict]] = Field(..., title="Owner User",
+                                                   description="The owner of the product listing")
     public: bool = Field(True, title="Public", description="Whether the product listing is public")
 
     @field_validator("rating")
@@ -169,5 +179,11 @@ class Response:
                   Union[ListingWithSKUs, ListingWithSales]]):
         """
         Response Model - Single listing
+        """
+        pass
+
+    class SKU(ResponseSchema[ListingMeta, SKU]):
+        """
+        Response Model - Single SKU
         """
         pass

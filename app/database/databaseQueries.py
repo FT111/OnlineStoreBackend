@@ -3,7 +3,7 @@ from collections import defaultdict
 from sqlite3 import Connection
 from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
-from app.models.listings import Listing, ListingWithSKUs, SKU
+from app.models.listings import Listing, ListingWithSKUs, SKU, SKUWithStock
 
 listingBaseQuery = """
 SELECT
@@ -35,6 +35,12 @@ SELECT
                 WHERE SkIm.skuID = Sk.id
         ))
     ) AS skus,
+    
+    json_group_array(
+        skIm.id
+    ) AS images,
+    
+    
     min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
     CASE
         WHEN EXISTS (
@@ -54,6 +60,7 @@ LEFT JOIN subCategories sCa ON sCa.id = Li.subCategoryID
 LEFT JOIN categories Ca ON Ca.id = sCa.categoryID
 LEFT JOIN users Us ON Us.id = Li.ownerID
 LEFT JOIN skus Sk ON Sk.listingID = Li.id
+LEFT JOIN skuImages SkIm ON SkIm.skuID = (SELECT Sk.id FROM skus Sk WHERE Sk.listingID = Li.id LIMIT 1)
 LEFT JOIN listingEvents Ev ON Ev.listingID = Li.id AND Ev.eventType = 'view'
 {}
 GROUP BY Li.id, Ca.title, sCa.title, Us.id
@@ -184,6 +191,19 @@ class Queries:
                     INSERT OR REPLACE INTO skuImages (id, skuID)
                     VALUES (?, ?)
                     """, (image, sku.id))
+                connection.commit()
+
+        @staticmethod
+        def addSKU(conn: callable, sku: SKUWithStock, listingID: str):
+            """
+            Add a SKU to the database
+            """
+            with conn as connection:
+                cursor = connection.cursor()
+                cursor.execute("""
+                INSERT INTO skus (id, listingID, title, description, price, discount, stock)
+                VALUES (?,?,?,?,?,?,?)
+                """, (sku.id, listingID, sku.title, sku.description, sku.price, sku.discount, sku.stock))
                 connection.commit()
 
         @staticmethod
