@@ -38,10 +38,18 @@ SELECT
         WHERE Sk.listingID = Li.id
     ) AS skus,
     
-    json_group_array(
-        skIm.id
+    (
+        SELECT json_group_array(
+            skIm.id
+        )
+        FROM skuImages skIm
+        WHERE skIm.skuID IN (
+            SELECT Sk.id
+            FROM skus Sk
+            WHERE Sk.listingID = Li.id
+            ORDER BY Sk.price
+        )
     ) AS images,
-    
     
     min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
     CASE
@@ -175,7 +183,7 @@ class Queries:
                 connection.commit()
 
         @staticmethod
-        def updateSKU(conn: callable, sku: SKU):
+        def updateSKU(conn: callable, sku: SKUWithStock):
             """
             Update a SKU in the database
             """
@@ -183,10 +191,10 @@ class Queries:
                 cursor = connection.cursor()
                 cursor.execute("""
                 UPDATE skus
-                SET title = ?, price = ?, discount = ?
+                SET title = ?, price = ?, discount = ?, stock = ?
                 WHERE id = ?
             
-                """, (sku.title, sku.price, sku.discount, sku.id))
+                """, (sku.title, sku.price, sku.discount, sku.stock, sku.id))
 
                 for image in sku.images:
                     cursor.execute("""
