@@ -181,9 +181,7 @@ def getListingByID(conn, listingID,
 	if listing is None:
 		raise NameError(f'Listing with id \'{listingID}\' not found')
 
-	print('Uncasted Listing:', dict(listing))
 	castedListing = formatListingRows([listing])[0]
-	print('Listing:', castedListing)
 
 	if not includePrivileged:
 		modelListing = ListingWithSKUs(**dict(castedListing))
@@ -268,14 +266,20 @@ def formatListingRows(listings):
 	:param listings: List of listings
 	:return:
 	"""
+	if not listings:
+		return []
 	if listings[0] is None:
 		return []
+
+	conversions = ['ownerUser', 'images', 'skuOptions']
 
 	castedListings = []
 	for listing in listings:
 		listingDict = dict(listing)
-		listingDict['ownerUser'] = json.loads(listingDict['ownerUser'])
-		listingDict['images'] = json.loads(listingDict['images'])
+
+		# Convert JSON strings from SQL to dictionaries
+		for key in conversions:
+			listingDict[key] = json.loads(listingDict[key])
 
 		# Convert the SKUs from JSON to a list of SKU objects
 		# Uses the SKUWithStock model to store the most detail

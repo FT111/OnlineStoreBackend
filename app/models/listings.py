@@ -16,6 +16,11 @@ class SKU(BaseModel):
     price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
 
+    options: Optional[Dict[str, str]] = Field({}, title="SKU Option Values",
+                                              description="The values of the SKU's assigned options, "
+                                                          "paired with the option type",
+                                              )
+
     @classmethod
     @field_validator("price")
     def validate_price(cls, value):
@@ -50,7 +55,6 @@ class SKUWithStock(SKU):
     """
     stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
-    @classmethod
     @field_validator("stock")
     def validate_stock(cls, value):
         if value < 0:
@@ -68,21 +72,18 @@ class SKUSubmission(BaseModel):
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
     stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
-    @classmethod
     @field_validator("price")
     def validate_price(cls, value):
         if value <= 0:
             raise ValueError('Price must be greater than 0')
         return value
 
-    @classmethod
     @field_validator("discount")
     def validate_discount(cls, value):
         if value is not None and (value < 1 or value > 99):
             raise ValueError('Discount must be between 1 and 99')
         return value
 
-    @classmethod
     @field_validator("stock")
     def validate_stock(cls, value):
         if value < 0:
@@ -138,6 +139,8 @@ class ListingWithSKUs(Listing):
     Contains SKUs, inherits from Listing. Used for detail on a specific listing
     """
     skus: List[SKU] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
+    skuOptions: Dict[str, List[str]] = Field({}, title="SKU Options",
+                                              description="The options for a listing's SKU, paired with the option type")
 
 
 class ListingWithSales(Listing):
@@ -145,6 +148,9 @@ class ListingWithSales(Listing):
     Contains private data, inherits from Listing. For sellers
     """
     skus: Optional[List[SKUWithStock]] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
+    skuOptions: Dict[str, List[str]] = Field({}, title="SKU Options",
+                                              description="The options for a listing's SKU, paired with the option type")
+
     # sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
     # revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")
 

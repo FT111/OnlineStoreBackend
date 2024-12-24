@@ -31,11 +31,19 @@ SELECT
                     SELECT json_group_array(skIm.id)
                     FROM skuImages skIm
                     WHERE skIm.skuID = Sk.id
+                ),
+                'options', (
+                    SELECT json_object(
+                        (SELECT title FROM skuTypes WHERE id = SkVa.skuTypeID), SkVa.title
+                    )
+                    FROM skuValues SkVa
+                    WHERE SkVa.skuID = Sk.id
                 )
             )
         )
         FROM skus Sk
         WHERE Sk.listingID = Li.id
+
     ) AS skus,
     
     (
@@ -50,6 +58,19 @@ SELECT
             ORDER BY Sk.price
         )
     ) AS images,
+    
+    (SELECT json_group_object(
+        skTy.title, (
+            SELECT json_group_array(
+                SkVa.title
+            )
+            FROM skuValues SkVa
+            WHERE SkVa.skuTypeID = skTy.id
+        )
+    )
+    FROM skuTypes skTy
+    WHERE skTy.listingID = Li.id
+    ) AS skuOptions,
     
     min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
     CASE
