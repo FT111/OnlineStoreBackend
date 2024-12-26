@@ -33,11 +33,11 @@ SELECT
                     WHERE skIm.skuID = Sk.id
                 ),
                 'options', (
-                    SELECT json_object(
+                    SELECT json_group_object(
                         (SELECT title FROM skuTypes WHERE id = SkVa.skuTypeID), SkVa.title
                     )
                     FROM skuValues SkVa
-                    WHERE SkVa.skuID = Sk.id
+                    WHERE SkVa.id IN ( SELECT valueID FROM skuOptions WHERE skuID = Sk.id)
                 )
             )
         )
@@ -61,7 +61,7 @@ SELECT
     
     (SELECT json_group_object(
         skTy.title, (
-            SELECT json_group_array(
+            SELECT DISTINCT json_group_array(
                 SkVa.title
             )
             FROM skuValues SkVa

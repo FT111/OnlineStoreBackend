@@ -96,6 +96,7 @@ async def updateListing(listing: ListingWithSKUs,
                         user=Depends(userRequired),
                         conn: sqlite3.Connection = Depends(getDBSession)):
 
+    verifyListingOwnership(listing.id, user)
     if user['id'] != listing.ownerUser.id:
         raise HTTPException(status_code=403, detail="You do not have permission to edit this listing")
 
@@ -111,7 +112,10 @@ async def updateSKU(sku: SKUWithStock,
                     user=Depends(userRequired),
                     conn: sqlite3.Connection = Depends(getDBSession)):
 
+    # Check if the user owns the listing - 401s if not
     listing = verifyListingOwnership(listingID, user)
+
+    # Check if the SKU exists in the listing
     if sku.id not in [sku.id for sku in listing.skus]:
         raise HTTPException(status_code=404, detail="SKU not found")
 
