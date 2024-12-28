@@ -156,7 +156,6 @@ class ListingSearch(Search):
 		for searchCategory in self.termFrequencies:
 			for searchSubCategory in self.termFrequencies[searchCategory]:
 				for id, termFrequencies in self.termFrequencies[searchCategory][searchSubCategory]:
-					print(subCategory, searchSubCategory)
 
 					if category != searchCategory and category is not None:
 						continue

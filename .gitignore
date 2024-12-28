@@ -1,3 +1,4 @@
 /testing/
 /app/database/databaseProd.db
 /app/static/*
+/app/static/listingImages/

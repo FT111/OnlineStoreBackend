@@ -10,8 +10,11 @@ from sqlite3 import Connection
 from starlette.requests import Request
 from typing_extensions import Union
 
-from ..database.databaseQueries import Queries
+from . import data as data
+from ..database.database import getDBSession
 
+from ..database.databaseQueries import Queries
+from ..models.listings import Listing, ListingWithSKUs
 
 JWT_EXPIRY = 604_800
 # SECRET_KEY = secrets.token_urlsafe(32)
@@ -68,8 +71,6 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
         return False
 
 
-
-
 def generateSalt() -> str:
     """
     Generates a salt for hashing passwords
@@ -80,7 +81,8 @@ def generateSalt() -> str:
 
 def userRequired(request: Request) -> dict:
     """
-    Dependency for checking if a user is logged-in
+    Dependency for requiring a valid user
+
     User data is gathered via JWT token in middleware
     """
 
@@ -104,3 +106,18 @@ def userOptional(request: Request) -> Union[dict, None]:
 def hashPassword(password, salt):
     return bcrypt.hashpw(password.encode('utf-8'), salt.encode('utf-8'))
 
+
+def verifyListingOwnership(listingID, user) -> ListingWithSKUs:
+    # Fetches parent listing
+    listing = data.getListingByID(getDBSession(),
+                                  listingID,
+                                  includePrivileged=True,
+                                  user=user)
+    # Checks if the listing exists
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    # Checks if the requester is the owner of the listing
+    if user['id'] != listing.ownerUser.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this listing")
+
+    return listing
