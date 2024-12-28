@@ -114,7 +114,6 @@ async def updateSKU(sku: SKUWithStock,
 
     # Check if the user owns the listing - 401s if not
     listing = verifyListingOwnership(listingID, user)
-
     # Check if the SKU exists in the listing
     if sku.id not in [sku.id for sku in listing.skus]:
         raise HTTPException(status_code=404, detail="SKU not found")

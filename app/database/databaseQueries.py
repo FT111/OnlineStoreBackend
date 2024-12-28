@@ -222,6 +222,18 @@ class Queries:
                     INSERT OR REPLACE INTO skuImages (id, skuID)
                     VALUES (?, ?)
                     """, (image, sku.id))
+
+                # Remove all options
+                cursor.execute("DELETE FROM skuOptions WHERE skuID = ?", (sku.id,))
+                # Add new options
+                if sku.options:
+                    options = [(sku.id, value) for value in sku.options.values()]
+                    cursor.executemany("""
+                    INSERT OR REPLACE INTO skuOptions (skuID, valueID)
+                    VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
+                    """, options)
+
+                #     Add the updated SKU to the database
                 connection.commit()
 
         @staticmethod
