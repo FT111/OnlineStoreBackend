@@ -1,24 +1,19 @@
-import time
-import json
 import base64
+import json
+import time
+from typing import List, Union
+from uuid import uuid4
 
 import bcrypt
 import pydantic
-
-from typing import List, Optional, Union, Dict, Any, Tuple, Set
-
 from fastapi import HTTPException
-from starlette.requests import Request
-from typing_extensions import Annotated
-from uuid import uuid4
-
-from app.models.users import User, PrivilegedUser, UserDetail
-from app.models.listings import Listing, ListingWithSales, SKU, ListingWithSKUs, ListingSubmission, SKUWithStock, \
-	SKUSubmission
-from app.models.categories import Category, SubCategory
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
+from app.models.categories import Category
+from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
+	SKUSubmission
+from app.models.users import User, PrivilegedUser, UserDetail
 
 
 def idsToListings(conn: callable, listingIDs: list) -> List[Listing]:
@@ -217,8 +212,12 @@ def updateSKU(conn1, conn2, sku: SKUWithStock, listingID: str):
 
 	sku.images = processAndStoreImages(sku.images, sku.id)
 
+	# Check if the SKU already exists with the same options - Must be unique
 	if len(sku.options) > 0:
-		if Queries.Listings.getSKUByOptions(conn1, sku.options, listingID):
+		existingSKU = Queries.Listings.getSKUByOptions(conn1, sku.options, listingID)
+
+		# If the SKU exists and is not the same as the current SKU, raise a conflict
+		if existingSKU and existingSKU['id'] != sku.id:
 			raise HTTPException(status_code=409, detail="SKU with these options already exists")
 
 	Queries.Listings.updateSKU(conn2, sku)
