@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from collections import defaultdict
 from sqlite3 import Connection
@@ -247,6 +248,20 @@ class Queries:
                 INSERT INTO skus (id, listingID, title, price, discount, stock)
                 VALUES (?,?,?,?,?,?)
                 """, (sku.id, listingID, sku.title, sku.price, sku.discount, sku.stock))
+
+                for image in sku.images:
+                    cursor.execute("""
+                    INSERT INTO skuImages (id, skuID)
+                    VALUES (?, ?)
+                    """, (image, sku.id))
+
+                if sku.options:
+                    options = [(sku.id, value) for value in sku.options.values()]
+                    cursor.executemany("""
+                    INSERT INTO skuOptions (skuID, valueID)
+                    VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
+                    """, options)
+
                 connection.commit()
 
         @staticmethod
@@ -343,8 +358,26 @@ class Queries:
                 listing = cursor.fetchall()
                 return listing
 
-    class Categories:
+        @staticmethod
+        def getSKUByOptions(conn: callable, options: dict, listingID: str) -> sqlite3.Row:
+            """
+            Get a SKU by its options
+            """
+            with conn as connection:
+                cursor = connection.cursor()
 
+                jsonOptions = json.dumps(options)
+                query = """
+                SELECT Sk.id
+                FROM skuOptionsView Sk
+                WHERE Sk.listingID = ?
+                AND Sk.options = json(?)   
+                """
+                cursor.execute(query, (listingID, jsonOptions, ))
+                sku = cursor.fetchone()
+                return sku
+
+    class Categories:
         @staticmethod
         def getCategory(conn: callable, title) -> sqlite3.Row:
             """

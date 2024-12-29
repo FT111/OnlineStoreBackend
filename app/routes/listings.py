@@ -118,7 +118,7 @@ async def updateSKU(sku: SKUWithStock,
     if sku.id not in [sku.id for sku in listing.skus]:
         raise HTTPException(status_code=404, detail="SKU not found")
 
-    data.updateSKU(conn, sku)
+    data.updateSKU(conn, getDBSession(), sku, listing.id)
 
     return ListingResponses.SKU(meta={"id": sku.id},
                                 data=sku)

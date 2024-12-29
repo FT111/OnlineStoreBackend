@@ -7,6 +7,7 @@ import pydantic
 
 from typing import List, Optional, Union, Dict, Any, Tuple, Set
 
+from fastapi import HTTPException
 from starlette.requests import Request
 from typing_extensions import Annotated
 from uuid import uuid4
@@ -204,16 +205,23 @@ def updateListing(conn, listing: ListingWithSKUs):
 	return listing
 
 
-def updateSKU(conn, sku: SKUWithStock):
+def updateSKU(conn1, conn2, sku: SKUWithStock, listingID: str):
 	"""
 	Update a SKU
-	:param conn: Database connection
+	:param conn1: Database connection
+	:param conn2: Database connection for the SKU
 	:param sku: SKU Pydantic model
+	:param listingID: The ID of the listing the SKU belongs to
 	:return:
 	"""
 
 	sku.images = processAndStoreImages(sku.images, sku.id)
-	Queries.Listings.updateSKU(conn, sku)
+
+	if len(sku.options) > 0:
+		if Queries.Listings.getSKUByOptions(conn1, sku.options, listingID):
+			raise HTTPException(status_code=409, detail="SKU with these options already exists")
+
+	Queries.Listings.updateSKU(conn2, sku)
 
 	return sku
 
