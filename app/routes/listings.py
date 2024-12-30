@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+import sqlite3
 from typing import Dict
+
+from fastapi import APIRouter, Depends, HTTPException
 from typing_extensions import Optional
 
+import app.functions.data as data
+import app.instances as instances
 from ..database.database import getDBSession
+from ..functions.auth import userRequired, userOptional, verifyListingOwnership
+from ..models.categories import Category
 from ..models.listings import Listing, ListingSubmission, ListingWithSKUs, SKUWithStock, SKUSubmission
 from ..models.listings import Response as ListingResponses
 from ..models.users import User
-from ..functions.auth import userRequired, userOptional, verifyListingOwnership
-import app.functions.data as data
-
-import app.instances as instances
-
-import sqlite3
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
@@ -60,8 +60,11 @@ async def createListing(listing: ListingSubmission,
     :return:
     """
 
-    # Get the user from the database
+    # Get the user and category from the database
     user: User = data.getUserByID(getDBSession(), user['id'])
+    category: Optional[Category] = data.getCategoryBySubcategoryTitle(conn, listing.subCategory)
+    if not category: # Verifies that the category and relevant subcategory exists
+        raise HTTPException(status_code=404, detail="Category not found")
 
     # Create the listing
     listing: Listing = data.createListing(conn, listing, user)
@@ -79,14 +82,20 @@ async def getListing(
         includePrivileged: bool = False,
         user: Optional[Dict] = Depends(userOptional),
         conn: sqlite3.Connection = Depends(getDBSession)):
+    """
+    Get a listing by its ID.
+    Users can request their own listings with privileged information (such as stock levels).
+    :param listingID:
+    :param includePrivileged:
+    :param user:
+    :param conn:
+    :return:
+    """
 
-    try:
-        if includePrivileged and user:
-            listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
-        else:
-            listingObj = data.getListingByID(conn, listingID)
-    except NameError:
-        raise HTTPException(status_code=404, detail="Listing not found")
+    if includePrivileged and user:
+        listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
+    else:
+        listingObj = data.getListingByID(conn, listingID)
 
     return ListingResponses.Listing(meta={"id": listingID}, data=listingObj)
 

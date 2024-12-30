@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field_validator
-from typing import List, Optional, Union, Dict, Any, Tuple, Set
+from typing import List, Optional, Union, Dict
+
+from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Annotated
 
-from app.models.users import User, PrivilegedUser, UserSubmission
 from app.models.response import ResponseSchema
+from app.models.users import User
 
 
 class SKU(BaseModel):
@@ -162,7 +163,7 @@ class ListingSubmission(BaseModel):
     """
     title: str = Field(..., title="Product Title", description="The title of the product listing")
     description: str = Field('', title="Product Description", description="The description of the product listing")
-    subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
+    subCategory: str = Field(..., title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
     public: bool = Field(False, title="Public", description="Whether the product listing is public")
 

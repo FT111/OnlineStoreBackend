@@ -7,6 +7,7 @@ from uuid import uuid4
 import bcrypt
 import pydantic
 from fastapi import HTTPException
+from typing_extensions import Optional
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
@@ -111,7 +112,6 @@ def getUserByID(conn: callable, userID: str,
 
 	user = dict(user)
 	user['listingIDs'] = json.loads(user['listingIDs'])
-	print('User:', user)
 
 	return UserDetail(**user)
 
@@ -127,14 +127,19 @@ def createUser(conn: callable,
 
 	dbUser = dict(user)
 	dbUser['id'] = str(uuid4())
+
+	# Hash the password and store the salt
 	salt = bcrypt.gensalt().decode('utf-8')
 	dbUser['passwordSalt'] = salt
 	passwordHash = auth.hashPassword(dbUser['password'], salt)
+
+	# Remove the plaintext password and store the hash
 	dbUser['passwordHash'] = passwordHash
 	del dbUser['password']
+
 	dbUser['joinedAt'] = int(dbUser['joinedAt'])
 
-	print('DB User:', dbUser)
+	# Add the user to the database
 	Queries.Users.addUser(conn, dbUser)
 
 	return PrivilegedUser(**dbUser)
@@ -174,8 +179,8 @@ def getListingByID(conn, listingID,
 	elif user is not None:
 		listing = Queries.Listings.getListingByID(conn, listingID, includePrivileged=True, requestUserID=user['id'])
 
-	if listing is None:
-		raise NameError(f'Listing with id \'{listingID}\' not found')
+	if listing is None: # If the listing is not found, raise a 404
+		raise HTTPException(status_code=404, detail="Listing not found")
 
 	castedListing = formatListingRows([listing])[0]
 
@@ -218,7 +223,7 @@ def updateSKU(conn1, conn2, sku: SKUWithStock, listingID: str):
 
 		# If the SKU exists and is not the same as the current SKU, raise a conflict
 		if existingSKU and existingSKU['id'] != sku.id:
-			raise HTTPException(status_code=409, detail="SKU with these options already exists")
+			raise HTTPException(status_code=409, detail="SKU with these variation options already exists")
 
 	Queries.Listings.updateSKU(conn2, sku)
 
@@ -301,3 +306,22 @@ def formatListingRows(listings):
 		# listingDict['skus'] = [dict(**sku) for sku in listingDict['skus']]
 		castedListings.append(listingDict)
 	return castedListings
+
+
+def getCategoryBySubcategoryTitle(conn, subcategoryTitle) -> Optional[Category]:
+	"""
+	Get a category by its subcategory title
+	:param conn: Database connection
+	:param subcategoryTitle: Subcategory title
+	:return: Category
+	"""
+
+	# Attempts to retrieve the category from the database
+	category = Queries.Categories.getCategoryBySubcategoryTitle(conn, subcategoryTitle)
+	if not category:
+		return None
+
+	# Converts returned row to a Category model
+	category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
+
+	return category
