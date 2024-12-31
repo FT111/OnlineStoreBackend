@@ -1,20 +1,17 @@
+import time
+from sqlite3 import Connection
+
 import bcrypt
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
 from jose import jwt, exceptions as joseExceptions
-import time
-import secrets
-from sqlite3 import Connection
-
 from starlette.requests import Request
 from typing_extensions import Union
 
 from . import data as data
 from ..database.database import getDBSession
-
 from ..database.databaseQueries import Queries
-from ..models.listings import Listing, ListingWithSKUs
+from ..models.listings import ListingWithSKUs
 
 JWT_EXPIRY = 604_800
 # SECRET_KEY = secrets.token_urlsafe(32)
@@ -83,7 +80,7 @@ def userRequired(request: Request) -> dict:
     """
     Dependency for requiring a valid user
 
-    User data is gathered via JWT token in middleware
+    Returned user is trusted, verified by a signed token.
     """
 
     if not request.state.user:

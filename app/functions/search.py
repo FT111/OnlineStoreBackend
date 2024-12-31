@@ -1,19 +1,14 @@
 import contextlib
+import math
+import threading
+import time
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 from ..database.databaseQueries import Queries
 from ..functions import data
-
-import sqlite3
-import cachetools.func
-import threading
-import time
-import math
-from collections import defaultdict
-from abc import ABC, abstractmethod
-from typing import Optional, List
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
 from ..models.listings import Listing
 
 
@@ -63,7 +58,7 @@ class ListingSearch(Search):
 		Incrementally indexes new additions to the database every minute.
 	"""
 
-	def __init__(self, connFunction: callable):
+	def __init__(self, dbSessionFunction):
 		self.tableName = 'listings'
 
 		self.lastTimestamp = 0
@@ -81,19 +76,21 @@ class ListingSearch(Search):
 		self.loadExecutor = ThreadPoolExecutor(max_workers=12)
 
 		# Load the table
-		threading.Thread(target=self.loadTable, args=(connFunction,)).start()
+		threading.Thread(target=self.loadTable, args=(dbSessionFunction,)).start()
 
-	def loadTable(self, conn: callable):
+	def loadTable(self, sessionFunction: callable):
 		"""
 		Incrementally loads the table. This function is called every minute.
-		:param conn:
+		:param sessionFunction: A function that returns a database session
 		:return:
 		"""
 
-		# Incrementally loads BM25 data
-		newListings = Queries.Listings.getListingsSince(conn, self.lastTimestamp)
-		# Update the last timestamp to the current time, for the next load
-		self.lastTimestamp = int(time.time())
+		# Get a connection to the database
+		with sessionFunction() as conn:
+			# Incrementally loads BM25 data
+			newListings = Queries.Listings.getListingsSince(conn, self.lastTimestamp)
+			# Update the last timestamp to the current time, for the next load
+			self.lastTimestamp = int(time.time())
 
 		if newListings:
 
@@ -221,7 +218,7 @@ class ListingSearch(Search):
 
 		return sortedListings
 
-	@cachetools.func.ttl_cache(maxsize=128, ttl=300)
+	# @cachetools.func.ttl_cache(maxsize=128, ttl=300)
 	def query(self, conn: contextlib.contextmanager, query: str, offset: int,
 			  limit: int, category: Optional[str] = None,
 			  sort: Optional[str] = None, order: Optional[str] = None,

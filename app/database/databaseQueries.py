@@ -1,10 +1,9 @@
 import json
 import sqlite3
-from collections import defaultdict
-from sqlite3 import Connection
-from typing_extensions import Annotated, Literal, TypedDict, Final, Optional, List
 
-from app.models.listings import Listing, ListingWithSKUs, SKU, SKUWithStock, SKUSubmission
+from typing_extensions import List
+
+from app.models.listings import Listing, SKUWithStock
 
 listingBaseQuery = """
 SELECT
@@ -105,43 +104,41 @@ class Queries:
     """
     class Users:
         @staticmethod
-        def getUserByEmail(conn: callable, email: str) -> sqlite3.Row:
+        def getUserByEmail(connection: callable, email: str) -> sqlite3.Row:
             """
             Get a user by their email
             """
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
-                user = cursor.fetchone()
-                return user
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
+            user = cursor.fetchone()
+            return user
 
         @staticmethod
-        def getUserByID(conn: callable, userID: str) -> sqlite3.Row:
+        def getUserByID(connection: callable, userID: str) -> sqlite3.Row:
             """
             Get a user by their ID
             """
-            with conn as connection:
-                query = """
-                    SELECT id, username, emailAddress, firstName, surname, 
-                    profilePictureURL, bannerURL, description, joinedAt,
-                        (
-                            SELECT json_group_array(
-                                   Li.id
-                                    )
-                                    FROM listings Li
-                                    WHERE Li.ownerID = Us.id
-                        ) AS listingIDs
-                    
-                    FROM users Us
-                    WHERE id = ?"""
-                cursor = connection.cursor()
-                cursor.execute(query, (userID,))
-                user = cursor.fetchone()
+            query = """
+                SELECT id, username, emailAddress, firstName, surname, 
+                profilePictureURL, bannerURL, description, joinedAt,
+                    (
+                        SELECT json_group_array(
+                               Li.id
+                                )
+                                FROM listings Li
+                                WHERE Li.ownerID = Us.id
+                    ) AS listingIDs
+                
+                FROM users Us
+                WHERE id = ?"""
+            cursor = connection.cursor()
+            cursor.execute(query, (userID,))
+            user = cursor.fetchone()
 
-                return user
+            return user
 
         @staticmethod
-        def addUser(conn: callable, user: dict):
+        def addUser(connection: callable, user: dict):
             """
             Adds a user to the database
             :param conn:
@@ -149,29 +146,27 @@ class Queries:
             :return:
             """
 
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("""
-                INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
-                VALUES (?,?,?,?,?,?,?,?)
-                """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
-                               user['passwordSalt'], user['joinedAt'],))
-                connection.commit()
+            cursor = connection.cursor()
+            cursor.execute("""
+            INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
+            VALUES (?,?,?,?,?,?,?,?)
+            """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
+                           user['passwordSalt'], user['joinedAt'],))
+            connection.commit()
 
         @staticmethod
-        def getPrivilegedUserByID(conn: callable, userID: str) -> sqlite3.Row:
+        def getPrivilegedUserByID(connection: callable, userID: str) -> sqlite3.Row:
             """
             Get a privileged user by their ID
             """
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
-                user = cursor.fetchone()
-                return user
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
+            user = cursor.fetchone()
+            return user
 
     class Listings:
         @staticmethod
-        def addListing(conn, listing: Listing):
+        def addListing(connection, listing: Listing):
             """
             Add a listing to the database
 
@@ -180,150 +175,142 @@ class Queries:
             :return:
             """
 
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("""
-                INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
-                VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
-                """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
-                      listing.addedAt, 0, 0, listing.subCategory,))
-                connection.commit()
+            cursor = connection.cursor()
+            cursor.execute("""
+            INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
+            VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
+            """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
+                  listing.addedAt, 0, 0, listing.subCategory,))
+            connection.commit()
 
         @staticmethod
-        def updateListing(conn: callable, listing: Listing):
+        def updateListing(connection: callable, listing: Listing):
             """
             Update a listing in the database
             """
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("""
-                UPDATE listings
-                SET title = ?, description = ?, public = ?, 
-                subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
-                WHERE id = ?
-                """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
-                connection.commit()
+            cursor = connection.cursor()
+            cursor.execute("""
+            UPDATE listings
+            SET title = ?, description = ?, public = ?, 
+            subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
+            WHERE id = ?
+            """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
+            connection.commit()
 
         @staticmethod
-        def updateSKU(conn: callable, sku: SKUWithStock):
+        def updateSKU(connection: callable, sku: SKUWithStock):
             """
             Update a SKU in the database
             """
-            with conn as connection:
-                cursor = connection.cursor()
+            cursor = connection.cursor()
+            cursor.execute("""
+            UPDATE skus
+            SET title = ?, price = ?, discount = ?, stock = ?
+            WHERE id = ?
+        
+            """, (sku.title, sku.price, sku.discount, sku.stock, sku.id))
+
+            for image in sku.images:
                 cursor.execute("""
-                UPDATE skus
-                SET title = ?, price = ?, discount = ?, stock = ?
-                WHERE id = ?
-            
-                """, (sku.title, sku.price, sku.discount, sku.stock, sku.id))
+                INSERT OR REPLACE INTO skuImages (id, skuID)
+                VALUES (?, ?)
+                """, (image, sku.id))
 
-                for image in sku.images:
-                    cursor.execute("""
-                    INSERT OR REPLACE INTO skuImages (id, skuID)
-                    VALUES (?, ?)
-                    """, (image, sku.id))
+            # Remove all options
+            cursor.execute("DELETE FROM skuOptions WHERE skuID = ?", (sku.id,))
+            # Add new options
+            if sku.options:
+                options = [(sku.id, value) for value in sku.options.values()]
+                cursor.executemany("""
+                INSERT OR REPLACE INTO skuOptions (skuID, valueID)
+                VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
+                """, options)
 
-                # Remove all options
-                cursor.execute("DELETE FROM skuOptions WHERE skuID = ?", (sku.id,))
-                # Add new options
-                if sku.options:
-                    options = [(sku.id, value) for value in sku.options.values()]
-                    cursor.executemany("""
-                    INSERT OR REPLACE INTO skuOptions (skuID, valueID)
-                    VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
-                    """, options)
-
-                #     Add the updated SKU to the database
-                connection.commit()
+            #     Add the updated SKU to the database
+            connection.commit()
 
         @staticmethod
-        def addSKU(conn: callable, sku: SKUWithStock, listingID: str):
+        def addSKU(connection: callable, sku: SKUWithStock, listingID: str):
             """
             Add a SKU to the database
             """
-            with conn as connection:
-                cursor = connection.cursor()
+            cursor = connection.cursor()
+            cursor.execute("""
+            INSERT INTO skus (id, listingID, title, price, discount, stock)
+            VALUES (?,?,?,?,?,?)
+            """, (sku.id, listingID, sku.title, sku.price, sku.discount, sku.stock))
+
+            for image in sku.images:
                 cursor.execute("""
-                INSERT INTO skus (id, listingID, title, price, discount, stock)
-                VALUES (?,?,?,?,?,?)
-                """, (sku.id, listingID, sku.title, sku.price, sku.discount, sku.stock))
+                INSERT INTO skuImages (id, skuID)
+                VALUES (?, ?)
+                """, (image, sku.id))
 
-                for image in sku.images:
-                    cursor.execute("""
-                    INSERT INTO skuImages (id, skuID)
-                    VALUES (?, ?)
-                    """, (image, sku.id))
+            if sku.options:
+                options = [(sku.id, value) for value in sku.options.values()]
+                cursor.executemany("""
+                INSERT INTO skuOptions (skuID, valueID)
+                VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
+                """, options)
 
-                if sku.options:
-                    options = [(sku.id, value) for value in sku.options.values()]
-                    cursor.executemany("""
-                    INSERT INTO skuOptions (skuID, valueID)
-                    VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
-                    """, options)
-
-                connection.commit()
+            connection.commit()
 
         @staticmethod
-        def getListingIDsByUsername(conn: callable, username: str) -> List[int]:
+        def getListingIDsByUsername(connection: callable, username: str) -> List[int]:
             """
             Get a list of listing IDs by a username
             """
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute("SELECT id FROM listings WHERE ownerID ="
-                               " (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
-                listings = cursor.fetchall()
-                return listings
+            cursor = connection.cursor()
+            cursor.execute("SELECT id FROM listings WHERE ownerID ="
+                           " (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
+            listings = cursor.fetchall()
+            return listings
 
         @staticmethod
-        def getListingsSince(conn: callable, timestamp: int) -> List[sqlite3.Row]:
+        def getListingsSince(connection: callable, timestamp: int) -> List[sqlite3.Row]:
             """
             Returns all rows since the timestamp.
             """
 
-            with conn() as connection:
-                cursor = connection.cursor()
-
-                cursor.execute(f"""SELECT Li.id, Li.title, Li.description,
-                         (
-                            SELECT sCa.title 
+            cursor = connection.cursor()
+            cursor.execute(f"""SELECT Li.id, Li.title, Li.description,
+                     (
+                        SELECT sCa.title 
+                         FROM subCategories sCa
+                         WHERE sCa.id = Li.subCategoryID
+                    ) AS subCategory,
+                    (
+                         SELECT Ca.title
+                         FROM categories Ca
+                         WHERE Ca.id = (
+                             SELECT sCa.categoryID
                              FROM subCategories sCa
                              WHERE sCa.id = Li.subCategoryID
-                        ) AS subCategory,
-                        (
-                             SELECT Ca.title
-                             FROM categories Ca
-                             WHERE Ca.id = (
-                                 SELECT sCa.categoryID
-                                 FROM subCategories sCa
-                                 WHERE sCa.id = Li.subCategoryID
-                             )
-                        ) AS category
-                     FROM listings Li
-                     WHERE addedAt > ?""",
-                               (timestamp,))
+                         )
+                    ) AS category
+                 FROM listings Li
+                 WHERE addedAt > ?""",
+                           (timestamp,))
 
-                return cursor.fetchall()
+            return cursor.fetchall()
 
         @staticmethod
-        def getListingsByIDs(conn: callable, listingIDs: list) -> list:
+        def getListingsByIDs(connection: callable, listingIDs: list) -> list:
             """
             Get a listing by its ID
             """
             query = listingBaseQuery.format("""
-                WHERE Li.id IN ({}) AND
-                Li.public = 1
-                """.format(','.join('?' * len(listingIDs))))
+            WHERE Li.id IN ({}) AND
+            Li.public = 1
+            """.format(','.join('?' * len(listingIDs))))
 
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute(query, listingIDs)
-                listing = cursor.fetchall()
-                return listing
+            cursor = connection.cursor()
+            cursor.execute(query, listingIDs)
+            listing = cursor.fetchall()
+            return listing
 
         @staticmethod
-        def getListingByID(conn: callable, listingID: str,
+        def getListingByID(connection: callable, listingID: str,
                            includePrivileged: bool = False,
                            requestUserID=None) -> sqlite3.Row:
             """
@@ -334,101 +321,111 @@ class Queries:
             AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
             """)
 
-            with conn as connection:
-                cursor = connection.cursor()
-                # Allow listing owners to view their own private listings
-                if includePrivileged:
-                    cursor.execute(query, (listingID, requestUserID))
-                else:
-                    cursor.execute(query, (listingID,))
-                listing = cursor.fetchone()
-                return listing
+            cursor = connection.cursor()
+            # Allow listing owners to view their own private listings
+            if includePrivileged:
+                cursor.execute(query, (listingID, requestUserID))
+            else:
+                cursor.execute(query, (listingID,))
+            listing = cursor.fetchone()
+            return listing
 
         @staticmethod
-        def getListingsByUserID(conn, userID,
+        def getListingsByUserID(connection, userID,
                                 includePrivileged=False):
 
             query = listingBaseQuery.format(f"""
             WHERE Li.ownerID = ?
             """ + ("" if includePrivileged else "AND Li.public = 1"))
 
-            with conn as connection:
-                cursor = connection.cursor()
-                cursor.execute(query, (userID,))
-                listing = cursor.fetchall()
-                return listing
+            cursor = connection.cursor()
+            cursor.execute(query, (userID,))
+            listing = cursor.fetchall()
+            return listing
 
         @staticmethod
-        def getSKUByOptions(conn: callable, options: dict, listingID: str) -> sqlite3.Row:
+        def getSKUByOptions(connection: callable, options: dict, listingID: str) -> sqlite3.Row:
             """
             Get a SKU by its options
             """
-            with conn as connection:
-                cursor = connection.cursor()
+            cursor = connection.cursor()
 
-                jsonOptions = json.dumps(options)
-                query = """
-                SELECT Sk.id
-                FROM skuOptionsView Sk
-                WHERE Sk.listingID = ?
-                AND Sk.options = json(?)   
-                """
-                cursor.execute(query, (listingID, jsonOptions, ))
-                sku = cursor.fetchone()
-                return sku
+            jsonOptions = json.dumps(options)
+            query = """
+            SELECT Sk.id
+            FROM skuOptionsView Sk
+            WHERE Sk.listingID = ?
+            AND Sk.options = json(?)   
+            """
+            cursor.execute(query, (listingID, jsonOptions, ))
+            sku = cursor.fetchone()
+            return sku
 
     class Categories:
         @staticmethod
-        def getCategory(conn: callable, title) -> sqlite3.Row:
+        def getCategory(connection: callable, title) -> sqlite3.Row:
             """
             Returns a single category specified by a title
+            :param connection:
             :param title:
-            :param conn:
             :return:
             """
 
-            with conn as connection:
-                cursor = connection.cursor()
+            cursor = connection.cursor()
 
-                cursor.execute(f"""SELECT id, title, description, colour,
-                                    (
-                                    SELECT json_group_array(
-                                        json_object(
-                                            'id', sCa.id,
-                                            'title', sCa.title
-                                        ) )
-                                    FROM subCategories sCa
-                                    WHERE sCa.categoryID = categories.id
-                                    ) AS subCategories
-                                    
-                         FROM categories
-                         WHERE title = ?""", (title,))
+            cursor.execute(f"""SELECT id, title, description, colour,
+                                (
+                                SELECT json_group_array(
+                                    json_object(
+                                        'id', sCa.id,
+                                        'title', sCa.title
+                                    ) )
+                                FROM subCategories sCa
+                                WHERE sCa.categoryID = categories.id
+                                ) AS subCategories
+                                
+                     FROM categories
+                     WHERE title = ?""", (title,))
 
-                return cursor.fetchone()
+            return cursor.fetchone()
 
         @staticmethod
-        def getAllCategories(conn: callable) -> List[sqlite3.Row]:
+        def getAllCategories(connection: callable) -> List[sqlite3.Row]:
             """
             Returns all categories.
             """
 
-            with conn as connection:
-                cursor = connection.cursor()
+            cursor = connection.cursor()
 
-                cursor.execute(f"""SELECT id, title, description, colour,
-                                    (
-                                    SELECT json_group_array(
-                                        json_object(
-                                            'id', sCa.id,
-                                            'title', sCa.title
-                                        ) )
-                                    FROM subCategories sCa
-                                    WHERE sCa.categoryID = categories.id
-                                    ) AS subCategories
-                                    
-                         FROM categories""")
+            cursor.execute(f"""SELECT id, title, description, colour,
+                                (
+                                SELECT json_group_array(
+                                    json_object(
+                                        'id', sCa.id,
+                                        'title', sCa.title
+                                    ) )
+                                FROM subCategories sCa
+                                WHERE sCa.categoryID = categories.id
+                                ) AS subCategories
+                                
+                     FROM categories""")
 
-                return cursor.fetchall()
+            return cursor.fetchall()
+
+        @staticmethod
+        def getCategoryBySubcategoryTitle(connection: callable, subcategory: str) -> sqlite3.Row:
+            """
+            Get the category of a subcategory
+            """
+            cursor = connection.cursor()
+            cursor.execute("""
+            SELECT Ca.id, Ca.title, Ca.description, Ca.colour
+            FROM categories Ca
+            JOIN subCategories sCa ON sCa.categoryID = Ca.id
+            WHERE sCa.title = ?
+            """, (subcategory,))
+            category = cursor.fetchone()
+            return category
 
 
 

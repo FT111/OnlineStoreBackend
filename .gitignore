@@ -2,3 +2,5 @@
 /app/database/databaseProd.db
 /app/static/*
 /app/static/listingImages/
+/app/database/databaseDev.db
+/app/database/databaseTest.db
