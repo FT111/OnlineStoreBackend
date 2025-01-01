@@ -1,14 +1,15 @@
-import contextlib
 import math
+import sqlite3
 import threading
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
 
+from typing_extensions import Optional
+
+from .data import DataRepository
 from ..database.databaseQueries import Queries
-from ..functions import data
 from ..models.listings import Listing
 
 
@@ -18,7 +19,8 @@ class Search(ABC):
 	"""
 
 	@abstractmethod
-	def query(self, conn: contextlib.contextmanager, query: str, offset: int, limit: int) -> list:
+	def query(self, conn, data,
+			  query: str, offset: int, limit: int) -> list:
 		pass
 
 	@staticmethod
@@ -219,7 +221,9 @@ class ListingSearch(Search):
 		return sortedListings
 
 	# @cachetools.func.ttl_cache(maxsize=128, ttl=300)
-	def query(self, conn: contextlib.contextmanager, query: str, offset: int,
+	def query(self, conn: sqlite3.Connection,
+			  data: DataRepository,
+			  query: str, offset: int,
 			  limit: int, category: Optional[str] = None,
 			  sort: Optional[str] = None, order: Optional[str] = None,
 			  subCategory: Optional[str] = None
@@ -242,7 +246,7 @@ class ListingSearch(Search):
 		scores = self.queryDocuments(query, category, subCategory)
 
 		# Get the full listings from the listingID scores
-		listings = data.idsToListings(conn, [score[0] for score in scores])
+		listings = data.idsToListings([score[0] for score in scores])
 		# Get the rows of the top results
 		listings = self.sortListings(listings, sort, order)
 		# Paginate the results

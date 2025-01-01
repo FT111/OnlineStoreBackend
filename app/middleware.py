@@ -1,23 +1,25 @@
-from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field_validator
-from typing import List, Optional, Union, Dict, Any, Tuple, Set
-from typing_extensions import Annotated
-from fastapi import FastAPI, Response, Request, APIRouter, HTTPException, status
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from asyncio import sleep
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.functions.auth import validateTokenUser
+from app.functions.auth import validateToken
 
 
 class GetUserMiddleware(BaseHTTPMiddleware):
+    """
+    Checks for a JWT token in the request header, validates it, and adds the user to the request state
+    """
     async def dispatch(self, request: Request, call_next):
 
-        authHeader = request.headers.get('authorization')
+        # Get the bearer header from the request
+        authHeader = request.headers.get('Authorization')
+        print('authHeader', authHeader)
+
+        # Get the JWT token from the header
         JWT = authHeader.split(' ')[1] if authHeader else None
 
+        # Validates the token if it exists, returns the user if valid
         if JWT:
-            user = validateTokenUser(JWT)
+            user = validateToken(JWT)
             if user:
                 request.state.user = user
             else:
@@ -25,8 +27,11 @@ class GetUserMiddleware(BaseHTTPMiddleware):
         else:
             request.state.user = None
 
-        print(request.state.user)
-        print(request.headers)
+        print(request.cookies)
+
+        # Continue the request
         response = await call_next(request)
+
+        # Return the response
         return response
 

@@ -4,8 +4,8 @@ from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException
 from typing_extensions import Optional
 
-import app.functions.data as data
 import app.instances as instances
+from app.functions.data import DataRepository
 from ..database.database import getDBSession
 from ..functions.auth import userRequired, userOptional, verifyListingOwnership
 from ..models.categories import Category
@@ -17,20 +17,21 @@ router = APIRouter(prefix="/listings", tags=["listings"])
 
 
 @router.api_route("/", methods=['GET', 'HEAD', 'OPTIONS'], response_model=ListingResponses.Listings)
-async def getListings(conn: sqlite3.Connection = Depends(getDBSession),
-                      query: Optional[str] = None,
+async def getListings(query: Optional[str] = None,
                       category: Optional[str] = None,
                       subCategory: Optional[str] = None,
                       sort: Optional[str] = None,
                       order: Optional[str] = 'desc',
                       limit: int = 10,
                       offset: int = 0,
+                      conn: sqlite3.Connection = Depends(getDBSession),
                       ):
+    data = DataRepository(conn)
 
     if limit > 40:
         raise HTTPException(status_code=400, detail="Limit must be less than 40")
 
-    total, listings = instances.listingsSearch.query(conn,
+    total, listings = instances.listingsSearch.query(conn, data,
                                                      query=query, offset=offset, limit=limit, category=category,
                                                      sort=sort, order=order, subCategory=subCategory)
 
@@ -60,14 +61,16 @@ async def createListing(listing: ListingSubmission,
     :return:
     """
 
+    data = DataRepository(conn)
+
     # Get the user and category from the database
-    user: User = data.getUserByID(getDBSession(), user['id'])
-    category: Optional[Category] = data.getCategoryBySubcategoryTitle(conn, listing.subCategory)
+    user: User = data.getUserByID(user['id'])
+    category: Optional[Category] = data.getCategoryBySubcategoryTitle(listing.subCategory)
     if not category: # Verifies that the category and relevant subcategory exists
         raise HTTPException(status_code=404, detail="Category not found")
 
     # Create the listing
-    listing: Listing = data.createListing(conn, listing, user)
+    listing: Listing = data.createListing( listing, user)
 
     # Prepare the listing for the response
     listing: ListingWithSKUs = ListingWithSKUs(**dict(listing),
@@ -92,24 +95,28 @@ async def getListing(
     :return:
     """
 
+    data = DataRepository(conn)
+
     if includePrivileged and user:
-        listingObj = data.getListingByID(conn, listingID, includePrivileged=True, user=user)
+        listingObj = data.getListingByID(listingID, includePrivileged=True, user=user)
     else:
-        listingObj = data.getListingByID(conn, listingID)
+        listingObj = data.getListingByID(listingID)
 
     return ListingResponses.Listing(meta={"id": listingID}, data=listingObj)
 
 
 @router.put("/{listingID}")
 async def updateListing(listing: ListingWithSKUs,
-                        user=Depends(userRequired),
-                        conn: sqlite3.Connection = Depends(getDBSession)):
+                        conn: sqlite3.Connection = Depends(getDBSession),
+                        user=Depends(userRequired)):
+
+    data = DataRepository(conn)
 
     verifyListingOwnership(listing.id, user)
     if user['id'] != listing.ownerUser.id:
         raise HTTPException(status_code=403, detail="You do not have permission to edit this listing")
 
-    data.updateListing(conn, listing)
+    data.updateListing(listing)
 
     return ListingResponses.Listing(meta={"id": listing.id},
                                     data=listing)
@@ -118,8 +125,10 @@ async def updateListing(listing: ListingWithSKUs,
 @router.put("/{listingID}/{skuID}")
 async def updateSKU(sku: SKUWithStock,
                     listingID: str,
-                    user=Depends(userRequired),
-                    conn: sqlite3.Connection = Depends(getDBSession)):
+                    conn: sqlite3.Connection = Depends(getDBSession),
+                    user=Depends(userRequired)):
+
+    data = DataRepository(conn)
 
     # Check if the user owns the listing - 401s if not
     listing = verifyListingOwnership(listingID, user)
@@ -127,7 +136,7 @@ async def updateSKU(sku: SKUWithStock,
     if sku.id not in [sku.id for sku in listing.skus]:
         raise HTTPException(status_code=404, detail="SKU not found")
 
-    data.updateSKU(conn, getDBSession(), sku, listing.id)
+    data.updateSKU(sku, listing.id)
 
     return ListingResponses.SKU(meta={"id": sku.id},
                                 data=sku)
@@ -139,9 +148,11 @@ async def createSKU(sku: SKUSubmission,
                     user=Depends(userRequired),
                     conn: sqlite3.Connection = Depends(getDBSession)):
 
+    data = DataRepository(conn)
+
     verifyListingOwnership(listingID, user)
 
-    createdSKU = data.createSKU(conn, sku, listingID)
+    createdSKU = data.createSKU(sku, listingID)
 
     return ListingResponses.SKU(meta={"id": createdSKU.id},
                                 data=createdSKU)

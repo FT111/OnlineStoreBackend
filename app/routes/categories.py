@@ -1,14 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import List, Dict, Any
-from typing_extensions import Annotated, Union, Optional
+import sqlite3
+
+from fastapi import APIRouter, Depends
 
 from ..database.database import getDBSession
-from ..functions import data
-from ..models.categories import Category, SubCategory
+from ..functions.data import DataRepository
 from ..models.categories import Response as CategoryResponse
-
-import cachetools.func
-import sqlite3
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
@@ -21,8 +17,10 @@ def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
     :return:  A list of all categories with metadata
     """
 
+    data = DataRepository(conn)
+
     # Get all categories from the database
-    categories = data.getAllCategories(conn)
+    categories = data.getAllCategories()
     total = len(categories)
 
     return CategoryResponse.Categories(meta={
@@ -33,17 +31,16 @@ def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
 
 
 @router.get("/{categoryTitle}", response_model=CategoryResponse.Category)
-def getCategory(categoryTitle: str, conn: sqlite3.Connection = Depends(getDBSession)):
+def getCategory(categoryTitle: str):
     """
     
     :param categoryTitle:
-    :param conn:
-    :return: 
+    :return:
     """
 
-    category = data.getCategory(conn, categoryTitle)
+    data = DataRepository(conn)
 
-    print(category)
+    category = data.getCategory(categoryTitle)
 
     return CategoryResponse.Category(meta={
 

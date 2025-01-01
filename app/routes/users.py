@@ -1,31 +1,29 @@
+import sqlite3
 from collections import defaultdict
+from typing import Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from typing import List, Dict, Any
-from typing_extensions import Annotated, Union, Optional
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..database.database import getDBSession
-from ..functions import data
 from ..functions.auth import userRequired, userOptional
-from ..models.users import User, PrivilegedUser, UserSubmission
-from ..models.users import Response as UserResponse
+from ..functions.data import DataRepository
 from ..models.listings import Response as ListingResponses
-
-import cachetools.func
-import sqlite3
+from ..models.users import Response as UserResponse
+from ..models.users import UserSubmission
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get('/me', response_model=UserResponse.User)
-async def getMe(
-		conn: sqlite3.Connection = Depends(getDBSession),
-		user: Dict = Depends(userRequired)):
+async def getMe(user: Dict = Depends(userRequired),
+				conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
 	Get the current user
 	"""
 
-	userDetails = data.getUserByID(conn, user['id'])
+	data = DataRepository(conn)
+
+	userDetails = data.getUserByID(user['id'])
 
 	return UserResponse.User(meta={}, data=userDetails)
 
@@ -36,12 +34,14 @@ async def newUser(
 		conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
 	Create a new user in the database.
-	:param user: The user to create stored in a Pydantic model
 	:param conn: SQL DB connection
+	:param user: The user to create stored in a Pydantic model
 	:return: The user created
 	"""
 
-	user = data.createUser(conn, user)
+	data = DataRepository(conn)
+
+	user = data.createUser(user)
 
 	return UserResponse.User(meta={}, data=user)
 
@@ -61,11 +61,13 @@ async def getUser(
 	:return: 404 or the user
 	"""
 
+	data = DataRepository(conn)
+
 	# Queries the database for the user
 	if includePrivileged and user and user['id'] == userID:
-		user = data.getUserByID(conn, userID, includePrivileged=True)
+		user = data.getUserByID(userID, includePrivileged=True)
 	else:
-		user = data.getUserByID(conn, userID)
+		user = data.getUserByID(userID)
 	# Return a 404 if the user is not found
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
@@ -82,18 +84,20 @@ async def getUserListings(
 		conn: sqlite3.Connection = Depends(getDBSession)):
 	"""
 	Get all listings by a user.
+	:param conn: SQL DB connection
 	:param userID: A user's id
 	:param includePrivileged: Whether to include private information
-	:param conn: SQL DB connection
 	:param user:
 	:return: 404 or the user's listings
 	"""
 
+	data = DataRepository(conn)
+
 	# Queries the database for the user's listings
 	if includePrivileged and user and user['id'] == userID:
-		listings = data.getListingsByUserID(conn, userID, includePrivileged=True)
+		listings = data.getListingsByUserID(userID, includePrivileged=True)
 	else:
-		listings = data.getListingsByUserID(conn, userID)
+		listings = data.getListingsByUserID(userID)
 	# Return a 404 if the user is not found
 	if not listings:
 		raise HTTPException(status_code=404, detail="User not found")
