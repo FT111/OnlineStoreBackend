@@ -80,19 +80,19 @@ class ListingSearch(Search):
 		# Load the table
 		threading.Thread(target=self.loadTable, args=(dbSessionFunction,)).start()
 
-	def loadTable(self, sessionFunction: callable):
+	def loadTable(self, dbSessionFunction: callable):
 		"""
 		Incrementally loads the table. This function is called every minute.
-		:param sessionFunction: A function that returns a database session
+		:param dbSession: A function that returns a database session
 		:return:
 		"""
 
 		# Get a connection to the database
-		with sessionFunction() as conn:
-			# Incrementally loads BM25 data
-			newListings = Queries.Listings.getListingsSince(conn, self.lastTimestamp)
-			# Update the last timestamp to the current time, for the next load
-			self.lastTimestamp = int(time.time())
+		session = dbSessionFunction()
+		# Incrementally loads BM25 data
+		newListings = Queries.Listings.getListingsSince(session, self.lastTimestamp)
+		# Update the last timestamp to the current time, for the next load
+		self.lastTimestamp = int(time.time())
 
 		if newListings:
 

@@ -1,23 +1,116 @@
 import sqlite3
 import threading
+from dataclasses import dataclass
+from queue import Queue
+
+from typing_extensions import Union
 
 localThread = threading.local()
+sqlite3.threadsafety = 1
 
 
-def getDB(db_path='./app/database/databaseDev.db') -> sqlite3.Connection:
+@dataclass
+class QueryTask:
+    query: str
+    args: tuple
+    result_queue: Queue
+
+
+class Database:
     """
-    Yields a connection to the database and closes it after the request is done.
+    Queued SQLite database handler
+    Uses a single thread and connection to avoid SQlite's awful threading issues
     """
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    def __init__(self, path: str) -> None:
+        self.query_queue = Queue()
+        self.path = path
+        self.connection = None
+        self.running = True
+        self.start_handler()
 
-    return conn
+    def start_handler(self):
+        threading.Thread(target=self._process_queue, daemon=True).start()
+
+    def _init_connection(self):
+        """
+        Initialise the connection
+        """
+        self.connection.row_factory = sqlite3.Row
+        tempCursor = self.connection.cursor()
+        tempCursor.execute("PRAGMA foreign_keys = ON")
+        tempCursor.execute("PRAGMA journal_mode = WAL")
+        tempCursor.close()
+
+    def _process_queue(self):
+        """
+        Processes and executes queries from the queue
+        :return:
+        """
+        self.connection = sqlite3.connect(self.path)
+        self._init_connection()
+
+        while self.running:
+            try:
+                task = self.query_queue.get()
+
+                # Stop running if stopped
+                if task is None:
+                    break
+
+                try:
+                    # Execute the query
+                    cursor = self.connection.cursor()
+                    if task.args:
+                        cursor.execute(task.query, task.args)
+                    else:
+                        cursor.execute(task.query)
+
+                    # Handle different query types
+                    if task.query.strip().upper().startswith('SELECT'):
+                        result = cursor.fetchall()
+                    else:
+                        self.connection.commit()
+                        result = cursor.rowcount
+
+                    # Returns the result to the caller
+                    task.result_queue.put(('result', result))
+
+                except Exception as e:
+                    # Returns the error to the caller
+                    task.result_queue.put(('error', e))
+
+            except Exception as e:
+                print(f"Queue error: {e}")
+            finally:
+                self.query_queue.task_done()
+
+    def execute(self, query: str, args: tuple = ()) -> Union[list, int]:
+        """
+        Execute a query on the database
+        :param query: An SQLite query
+        :param args: Arguments for the query
+        :return: Either the result of the query or a database error
+        """
+        result_queue = Queue()
+        task = QueryTask(query, args, result_queue)
+        self.query_queue.put(task)
+
+        # Wait for and return result
+        status, data = result_queue.get()
+        if status == 'error':
+            raise data
+        return data
+
+    def close(self):
+        self.running = False # Stop new queries
+        self.query_queue.put(None)  # Signal thread to stop
+        self.query_queue.join() # Wait for thread to stop
+        if self.connection:
+            self.connection.close()
 
 
-async def getDBSession():
+dbQueue = Database('./app/database/databaseDev.db')
 
-    session = getDB()
-    try:
-        yield session
-    finally:
-        session.close()
+
+def getDBSession():
+    return dbQueue
