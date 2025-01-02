@@ -13,7 +13,7 @@ sqlite3.threadsafety = 1
 class QueryTask:
     query: str
     args: tuple
-    result_queue: Queue
+    resultQueue: Queue
 
 
 class Database:
@@ -26,12 +26,12 @@ class Database:
         self.path = path
         self.connection = None
         self.running = True
-        self.start_handler()
+        self.startHandler()
 
-    def start_handler(self):
-        threading.Thread(target=self._process_queue, daemon=True).start()
+    def startHandler(self):
+        threading.Thread(target=self._processQueue, daemon=True).start()
 
-    def _init_connection(self):
+    def _initConnection(self):
         """
         Initialise the connection
         """
@@ -41,13 +41,13 @@ class Database:
         tempCursor.execute("PRAGMA journal_mode = WAL")
         tempCursor.close()
 
-    def _process_queue(self):
+    def _processQueue(self):
         """
         Processes and executes queries from the queue
         :return:
         """
         self.connection = sqlite3.connect(self.path)
-        self._init_connection()
+        self._initConnection()
 
         while self.running:
             try:
@@ -73,11 +73,11 @@ class Database:
                         result = cursor.rowcount
 
                     # Returns the result to the caller
-                    task.result_queue.put(('result', result))
+                    task.resultQueue.put(('result', result))
 
                 except Exception as e:
                     # Returns the error to the caller
-                    task.result_queue.put(('error', e))
+                    task.resultQueue.put(('error', e))
 
             except Exception as e:
                 print(f"Queue error: {e}")
