@@ -8,8 +8,6 @@ from jose import jwt, exceptions as joseExceptions
 from starlette.requests import Request
 from typing_extensions import Union
 
-from . import data as data
-from ..database.database import getDBSession
 from ..database.databaseQueries import Queries
 from ..models.listings import ListingWithSKUs
 
@@ -104,12 +102,11 @@ def hashPassword(password, salt):
     return bcrypt.hashpw(password.encode('utf-8'), salt.encode('utf-8'))
 
 
-def verifyListingOwnership(listingID, user) -> ListingWithSKUs:
+def verifyListingOwnership(dataRepo, listingID, user) -> ListingWithSKUs:
     # Fetches parent listing
-    listing = data.getListingByID(getDBSession(),
-                                  listingID,
-                                  includePrivileged=True,
-                                  user=user)
+    listing = dataRepo.getListingByID(listingID,
+                                      includePrivileged=True,
+                                      user=user)
     # Checks if the listing exists
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")

@@ -1,8 +1,9 @@
 import json
 import sqlite3
 
-from typing_extensions import List
+from typing_extensions import List, Union, Optional
 
+from app.database.database import Database
 from app.models.listings import Listing, SKUWithStock
 
 listingBaseQuery = """
@@ -152,7 +153,7 @@ class Queries:
             VALUES (?,?,?,?,?,?,?,?)
             """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
                            user['passwordSalt'], user['joinedAt'],))
-            cursor.commit()
+            
 
         @staticmethod
         def getPrivilegedUserByID(cursor: callable, userID: str) -> sqlite3.Row:
@@ -180,7 +181,7 @@ class Queries:
             VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
             """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
                   listing.addedAt, 0, 0, listing.subCategory,))
-            cursor.commit()
+            
 
         @staticmethod
         def updateListing(cursor: callable, listing: Listing):
@@ -194,7 +195,7 @@ class Queries:
             subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
             WHERE id = ?
             """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
-            cursor.commit()
+            
 
         @staticmethod
         def updateSKU(cursor: callable, sku: SKUWithStock):
@@ -220,13 +221,11 @@ class Queries:
             # Add new options
             if sku.options:
                 options = [(sku.id, value) for value in sku.options.values()]
-                cursor.executemany("""
-                INSERT OR REPLACE INTO skuOptions (skuID, valueID)
-                VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
-                """, options)
-
-            #     Add the updated SKU to the database
-            cursor.commit()
+                for optionTuple in options:
+                    cursor.execute("""
+                    INSERT OR REPLACE INTO skuOptions (skuID, valueID)
+                    VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
+                    """, (optionTuple[0], optionTuple[1],))
 
         @staticmethod
         def addSKU(cursor: callable, sku: SKUWithStock, listingID: str):
@@ -251,8 +250,6 @@ class Queries:
                 INSERT INTO skuOptions (skuID, valueID)
                 VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
                 """, options)
-
-            cursor.commit()
 
         @staticmethod
         def getListingIDsByUsername(cursor: callable, username: str) -> List[int]:
@@ -302,15 +299,13 @@ class Queries:
             Li.public = 1
             """.format(','.join('?' * len(listingIDs))))
 
-
             result = cursor.execute(query, listingIDs)
-            listing = result
-            return listing
+            return result
 
         @staticmethod
-        def getListingByID(cursor: callable, listingID: str,
+        def getListingByID(cursor: Database, listingID: str,
                            includePrivileged: bool = False,
-                           requestUserID=None) -> sqlite3.Row:
+                           requestUserID=None) -> Union[sqlite3.Row, None]:
             """
             Get a listing by its ID, with associated SKUs
             """
@@ -319,14 +314,15 @@ class Queries:
             AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
             """)
 
-
             # Allow listing owners to view their own private listings
             if includePrivileged:
                 result = cursor.execute(query, (listingID, requestUserID))
             else:
                 result = cursor.execute(query, (listingID,))
-            listing = result[0]
-            return listing
+                
+            if not result:
+                return None
+            return result[0]
 
         @staticmethod
         def getListingsByUserID(cursor, userID,
@@ -342,7 +338,7 @@ class Queries:
             return listing
 
         @staticmethod
-        def getSKUByOptions(cursor: callable, options: dict, listingID: str) -> sqlite3.Row:
+        def getSKUByOptions(cursor: callable, options: dict, listingID: str) -> Optional[sqlite3.Row]:
             """
             Get a SKU by its options
             """
@@ -356,8 +352,9 @@ class Queries:
             AND Sk.options = json(?)   
             """
             result = cursor.execute(query, (listingID, jsonOptions, ))
-            sku = result[0]
-            return sku
+            if not result:
+                return None
+            return result[0]
 
     class Categories:
         @staticmethod
@@ -385,7 +382,7 @@ class Queries:
                      FROM categories
                      WHERE title = ?""", (title,))
 
-            return result[0]
+            return result[0] if result else None
 
         @staticmethod
         def getAllCategories(cursor: callable) -> List[sqlite3.Row]:

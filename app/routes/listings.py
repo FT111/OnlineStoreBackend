@@ -1,4 +1,3 @@
-import sqlite3
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +5,7 @@ from typing_extensions import Optional
 
 import app.instances as instances
 from app.functions.data import DataRepository
-from ..database.database import getDBSession
+from ..database import database
 from ..functions.auth import userRequired, userOptional, verifyListingOwnership
 from ..models.categories import Category
 from ..models.listings import Listing, ListingSubmission, ListingWithSKUs, SKUWithStock, SKUSubmission
@@ -23,15 +22,14 @@ async def getListings(query: Optional[str] = None,
                       sort: Optional[str] = None,
                       order: Optional[str] = 'desc',
                       limit: int = 10,
-                      offset: int = 0,
-                      conn: sqlite3.Connection = Depends(getDBSession),
+                      offset: int = 0
                       ):
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
     if limit > 40:
         raise HTTPException(status_code=400, detail="Limit must be less than 40")
 
-    total, listings = instances.listingsSearch.query(conn, data,
+    total, listings = instances.listingsSearch.query(database.dbQueue, data,
                                                      query=query, offset=offset, limit=limit, category=category,
                                                      sort=sort, order=order, subCategory=subCategory)
 
@@ -50,18 +48,17 @@ async def getListings(query: Optional[str] = None,
 
 @router.post("/", response_model=ListingResponses.Listing)
 async def createListing(listing: ListingSubmission,
-                        user=Depends(userRequired),
-                        conn: sqlite3.Connection = Depends(getDBSession)):
+                        user=Depends(userRequired)):
     """
     Create a new listing.
     Requires an authentication token in the header.
     :param listing:
     :param user:
-    :param conn:
+    :param database.dbQueue:
     :return:
     """
 
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
     # Get the user and category from the database
     user: User = data.getUserByID(user['id'])
@@ -83,19 +80,18 @@ async def createListing(listing: ListingSubmission,
 async def getListing(
         listingID: str,
         includePrivileged: bool = False,
-        user: Optional[Dict] = Depends(userOptional),
-        conn: sqlite3.Connection = Depends(getDBSession)):
+        user: Optional[Dict] = Depends(userOptional)):
     """
     Get a listing by its ID.
     Users can request their own listings with privileged information (such as stock levels).
     :param listingID:
     :param includePrivileged:
     :param user:
-    :param conn:
+    :param database.dbQueue:
     :return:
     """
 
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
     if includePrivileged and user:
         listingObj = data.getListingByID(listingID, includePrivileged=True, user=user)
@@ -107,12 +103,11 @@ async def getListing(
 
 @router.put("/{listingID}")
 async def updateListing(listing: ListingWithSKUs,
-                        conn: sqlite3.Connection = Depends(getDBSession),
                         user=Depends(userRequired)):
 
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
-    verifyListingOwnership(listing.id, user)
+    verifyListingOwnership(data, listing.id, user)
     if user['id'] != listing.ownerUser.id:
         raise HTTPException(status_code=403, detail="You do not have permission to edit this listing")
 
@@ -125,13 +120,12 @@ async def updateListing(listing: ListingWithSKUs,
 @router.put("/{listingID}/{skuID}")
 async def updateSKU(sku: SKUWithStock,
                     listingID: str,
-                    conn: sqlite3.Connection = Depends(getDBSession),
                     user=Depends(userRequired)):
 
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
     # Check if the user owns the listing - 401s if not
-    listing = verifyListingOwnership(listingID, user)
+    listing = verifyListingOwnership(data, listingID, user)
     # Check if the SKU exists in the listing
     if sku.id not in [sku.id for sku in listing.skus]:
         raise HTTPException(status_code=404, detail="SKU not found")
@@ -145,12 +139,11 @@ async def updateSKU(sku: SKUWithStock,
 @router.post("/{listingID}/sku")
 async def createSKU(sku: SKUSubmission,
                     listingID: str,
-                    user=Depends(userRequired),
-                    conn: sqlite3.Connection = Depends(getDBSession)):
+                    user=Depends(userRequired)):
 
-    data = DataRepository(conn)
+    data = DataRepository(database.dbQueue)
 
-    verifyListingOwnership(listingID, user)
+    verifyListingOwnership(data, listingID, user)
 
     createdSKU = data.createSKU(sku, listingID)
 

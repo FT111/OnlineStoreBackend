@@ -127,6 +127,12 @@ class Listing(BaseModel):
             raise ValueError('Views must be greater than or equal to 0')
         return value
 
+    @field_validator("title")
+    def validate_title(cls, value):
+        if len(value) < 1 or len(value) > 40:
+            raise ValueError('Title must be between 1 and 40 characters')
+        return value
+
     # @classmethod
     # @field_validator("skus")
     # def validate_skus(cls, value):

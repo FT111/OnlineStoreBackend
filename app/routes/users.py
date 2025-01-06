@@ -1,10 +1,9 @@
-import sqlite3
 from collections import defaultdict
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..database.database import getDBSession
+from ..database import database
 from ..functions.auth import userRequired, userOptional
 from ..functions.data import DataRepository
 from ..models.listings import Response as ListingResponses
@@ -16,12 +15,12 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get('/me', response_model=UserResponse.User)
 async def getMe(user: Dict = Depends(userRequired),
-				conn: sqlite3.Connection = Depends(getDBSession)):
+				):
 	"""
 	Get the current user
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	userDetails = data.getUserByID(user['id'])
 
@@ -31,7 +30,7 @@ async def getMe(user: Dict = Depends(userRequired),
 @router.put('/', response_model=UserResponse.User)
 async def newUser(
 		user: UserSubmission,
-		conn: sqlite3.Connection = Depends(getDBSession)):
+		):
 	"""
 	Create a new user in the database.
 	:param conn: SQL DB connection
@@ -39,7 +38,7 @@ async def newUser(
 	:return: The user created
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	user = data.createUser(user)
 
@@ -51,7 +50,7 @@ async def getUser(
 		userID: str,
 		includePrivileged: bool = False,
 		user: Dict = Depends(userOptional),
-		conn: sqlite3.Connection = Depends(getDBSession)):
+		):
 	"""
 	Get a user by their ID
 	:param user:
@@ -61,7 +60,7 @@ async def getUser(
 	:return: 404 or the user
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	# Queries the database for the user
 	if includePrivileged and user and user['id'] == userID:
@@ -81,7 +80,7 @@ async def getUserListings(
 		userID: str,
 		includePrivileged: bool = False,
 		user: Dict = Depends(userOptional),
-		conn: sqlite3.Connection = Depends(getDBSession)):
+		):
 	"""
 	Get all listings by a user.
 	:param conn: SQL DB connection
@@ -91,7 +90,7 @@ async def getUserListings(
 	:return: 404 or the user's listings
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	# Queries the database for the user's listings
 	if includePrivileged and user and user['id'] == userID:

@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing_extensions import Optional
 
 from .data import DataRepository
+from ..database.database import Database
 from ..database.databaseQueries import Queries
 from ..models.listings import Listing
 
@@ -80,15 +81,12 @@ class ListingSearch(Search):
 		# Load the table
 		threading.Thread(target=self.loadTable, args=(dbSessionFunction,)).start()
 
-	def loadTable(self, dbSessionFunction: callable):
+	def loadTable(self, session: Database):
 		"""
 		Incrementally loads the table. This function is called every minute.
-		:param dbSession: A function that returns a database session
+		:param session:  A database session
 		:return:
 		"""
-
-		# Get a connection to the database
-		session = dbSessionFunction()
 		# Incrementally loads BM25 data
 		newListings = Queries.Listings.getListingsSince(session, self.lastTimestamp)
 		# Update the last timestamp to the current time, for the next load
@@ -119,7 +117,7 @@ class ListingSearch(Search):
 
 	# # Schedule the next load - Uncomment in prod
 	# time.sleep(60)
-	# self.loadTable(conn)
+	# self.loadTable(database.dbQueue)
 
 	def processDocument(self, description: str, id, title: str, category: str, subCategory: str):
 		"""
@@ -204,16 +202,16 @@ class ListingSearch(Search):
 
 		if sort == 'price':
 			sortedListings = sorted(listings,
-									key=lambda listing: listing.basePrice if listing.basePrice is not None else 0,
+									key=lambda listing: listing['basePrice'] if listing['basePrice'] is not None else 0,
 									reverse=reverse)
 		elif sort == 'rating':
-			sortedListings = sorted(listings, key=lambda listing: listing.rating, reverse=reverse)
+			sortedListings = sorted(listings, key=lambda listing: listing['rating'], reverse=reverse)
 		elif sort == 'views':
-			sortedListings = sorted(listings, key=lambda listing: listing.views, reverse=reverse)
+			sortedListings = sorted(listings, key=lambda listing: listing['views'], reverse=reverse)
 		elif sort == 'trending':
 			currentTime = int(time.time())
 			sortedListings = sorted(listings, key=lambda listing: (
-																		  currentTime - listing.addedAt) / listing.views if listing.views > 0 else 1,
+																		  currentTime - listing['addedAt']) / listing['views'] if listing['views'] > 0 else 1,
 									reverse=reverse)
 		else:
 			sortedListings = listings
@@ -231,6 +229,7 @@ class ListingSearch(Search):
 
 		"""
 		Searches the database using the BM25 algorithm
+		:param data: A data repository object with an active database connection
 		:param subCategory: The subcategory to search in
 		:param conn: An context manager that returns a connection to a database
 		:param query: A query to search for

@@ -37,8 +37,8 @@ class Database:
         """
         self.connection.row_factory = sqlite3.Row
         tempCursor = self.connection.cursor()
-        tempCursor.execute("PRAGMA foreign_keys = ON")
-        tempCursor.execute("PRAGMA journal_mode = WAL")
+        # tempCursor.execute("PRAGMA foreign_keys = ON")
+        # tempCursor.execute("PRAGMA journal_mode = WAL")
         tempCursor.close()
 
     def _processQueue(self):
@@ -110,6 +110,20 @@ class Database:
 
 
 dbQueue = Database('./app/database/databaseDev.db')
+
+
+def createDatabase(location: str = './app/database/databaseDev.db'):
+    """
+    Create a new database
+    :param location: The path to the new database
+    :return:
+    """
+    db = sqlite3.connect(location)
+    cursor = db.cursor()
+    with open('./app/database/schema.sql', 'r') as f:
+        cursor.executescript(f.read())
+    db.commit()
+    db.close()
 
 
 def getDBSession():

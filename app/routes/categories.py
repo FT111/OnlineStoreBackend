@@ -1,8 +1,6 @@
-import sqlite3
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
-
-from ..database.database import getDBSession
+from ..database import database
 from ..functions.data import DataRepository
 from ..models.categories import Response as CategoryResponse
 
@@ -10,14 +8,14 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 @router.get("/", response_model=CategoryResponse.Categories)
-def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
+def getCategories():
 	"""
 	Get all categories on the platform
 	:param conn: Dependent, the connection to the database
 	:return:  A list of all categories with metadata
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	# Get all categories from the database
 	categories = data.getAllCategories()
@@ -32,7 +30,7 @@ def getCategories(conn: sqlite3.Connection = Depends(getDBSession)):
 
 @router.get("/{categoryTitle}", response_model=CategoryResponse.Category)
 def getCategory(categoryTitle: str,
-				conn: sqlite3.Connection = Depends(getDBSession)):
+				):
 	"""
 
 	:param conn: The connection to the database
@@ -40,7 +38,7 @@ def getCategory(categoryTitle: str,
 	:return:
 	"""
 
-	data = DataRepository(conn)
+	data = DataRepository(database.dbQueue)
 
 	category = data.getCategory(categoryTitle)
 
