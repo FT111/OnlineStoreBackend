@@ -6,6 +6,6 @@ Isolates shared state.
 from app.database import database
 from app.functions.search import ListingSearch
 
-listingsSearch = ListingSearch(database.dbQueue)
+listingsSearch = ListingSearch(database.db)
 
 

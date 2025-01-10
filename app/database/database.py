@@ -80,8 +80,9 @@ class SQLiteAdapter(DatabaseAdapter):
                     # Execute the query
                     cursor = self.connection.cursor()
                     if task.args:
-                        #
+                        # Execute the query with arguments
                         if isinstance(task.args, list):
+                            # Polymorphic handling of executemany
                             cursor.executemany(task.query, task.args)
                         else:
                             cursor.execute(task.query, task.args)
@@ -107,12 +108,12 @@ class SQLiteAdapter(DatabaseAdapter):
             finally:
                 self.query_queue.task_done()
 
-    def execute(self, query: str, args: Union[tuple, list]) -> Union[list, int]:
+    def execute(self, query: str, args: Union[tuple, list] = Union[tuple, list]) -> Union[list, int]:
         """
         Execute a query on the database
         :param query: An SQLite query
         :param args: Arguments for the query
-        :return: Either the result of the query or a database error
+        :return: Either the resulting rows of the query, affected row count or an SQLite3 database error
         """
         result_queue = Queue()
         task = QueryTask(query, args, result_queue)
@@ -124,13 +125,13 @@ class SQLiteAdapter(DatabaseAdapter):
             raise data
         return data
 
-    def executemany(self, query: str, args: list) -> Union[list, int]:
+    def executemany(self, query: str, args: list = list) -> Union[list, int]:
         """
         Executes multiple queries in a single transaction
         Simple wrapper for execute for improved readability and code intent
         :param query: An SQLite query
         :param args: Arguments for the query
-        :return: Either the result of the query or a database error
+        :return: Either the resulting rows of the query, row count or an SQLite3 database error
         """
         return self.execute(query, args)
 
