@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from queue import Queue
 
-from typing_extensions import Union
+from typing_extensions import Union, Optional
 
 
 class DatabaseAdapter(ABC):
@@ -28,8 +28,9 @@ class DatabaseAdapter(ABC):
 @dataclass
 class QueryTask:
     query: str
-    args: tuple
+    args: Union[tuple, list]
     resultQueue: Queue
+    isMany: bool = False
 
 
 class SQLiteAdapter(DatabaseAdapter):
@@ -41,7 +42,7 @@ class SQLiteAdapter(DatabaseAdapter):
         localThread = threading.local()
         sqlite3.threadsafety = 1
 
-        self.query_queue = Queue()
+        self.queryQueue = Queue()
         self.path = path
         self.connection = None
         self.running = True
@@ -70,7 +71,7 @@ class SQLiteAdapter(DatabaseAdapter):
 
         while self.running:
             try:
-                task = self.query_queue.get()
+                task = self.queryQueue.get()
 
                 # Stop running if stopped
                 if task is None:
@@ -81,8 +82,7 @@ class SQLiteAdapter(DatabaseAdapter):
                     cursor = self.connection.cursor()
                     if task.args:
                         # Execute the query with arguments
-                        if isinstance(task.args, list):
-                            # Polymorphic handling of executemany
+                        if task.isMany:
                             cursor.executemany(task.query, task.args)
                         else:
                             cursor.execute(task.query, task.args)
@@ -106,39 +106,44 @@ class SQLiteAdapter(DatabaseAdapter):
             except Exception as e:
                 print(f"Queue error: {e}")
             finally:
-                self.query_queue.task_done()
+                self.queryQueue.task_done()
 
-    def execute(self, query: str, args: Union[tuple, list] = Union[tuple, list]) -> Union[list, int]:
+    def execute(self, query: str, args: Optional[Union[tuple, list]] = None) -> Union[list, int]:
         """
         Execute a query on the database
         :param query: An SQLite query
         :param args: Arguments for the query
         :return: Either the resulting rows of the query, affected row count or an SQLite3 database error
         """
-        result_queue = Queue()
-        task = QueryTask(query, args, result_queue)
-        self.query_queue.put(task)
 
-        # Wait for and return result
-        status, data = result_queue.get()
-        if status == 'error':
-            raise data
-        return data
+        # Result queue is used to return the result of the query by the handler
+        # Awaited by the caller after the query is added to the query queue
+        resultQueue = Queue()
+        task = QueryTask(query, args, resultQueue)
+        return self.putQueryTaskAndAwaitResult(task)
 
     def executemany(self, query: str, args: list = list) -> Union[list, int]:
         """
         Executes multiple queries in a single transaction
-        Simple wrapper for execute for improved readability and code intent
         :param query: An SQLite query
         :param args: Arguments for the query
         :return: Either the resulting rows of the query, row count or an SQLite3 database error
         """
-        return self.execute(query, args)
+        resultQueue = Queue()
+        task = QueryTask(query, args, resultQueue, isMany=True)
+        return self.putQueryTaskAndAwaitResult(task)
+
+    def putQueryTaskAndAwaitResult(self, task: QueryTask):
+        self.queryQueue.put(task)
+        status, data = task.resultQueue.get()
+        if status == 'error':
+            raise data
+        return data
 
     def close(self):
         self.running = False # Stop new queries
-        self.query_queue.put(None)  # Signal thread to stop
-        self.query_queue.join() # Wait for thread to stop
+        self.queryQueue.put(None)  # Signal thread to stop
+        self.queryQueue.join() # Wait for thread to stop
         if self.connection:
             self.connection.close()
 
