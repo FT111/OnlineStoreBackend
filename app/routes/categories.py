@@ -15,7 +15,7 @@ def getCategories():
 	:return:  A list of all categories with metadata
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	# Get all categories from the database
 	categories = data.getAllCategories()
@@ -38,7 +38,7 @@ def getCategory(categoryTitle: str,
 	:return:
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	category = data.getCategory(categoryTitle)
 

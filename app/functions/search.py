@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing_extensions import Optional
 
 from .data import DataRepository
-from ..database.database import Database
+from ..database.database import SQLiteAdapter
 from ..database.databaseQueries import Queries
 from ..models.listings import Listing
 
@@ -81,7 +81,7 @@ class ListingSearch(Search):
 		# Load the table
 		threading.Thread(target=self.loadTable, args=(dbSessionFunction,)).start()
 
-	def loadTable(self, session: Database):
+	def loadTable(self, session: SQLiteAdapter):
 		"""
 		Incrementally loads the table. This function is called every minute.
 		:param session:  A database session

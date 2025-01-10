@@ -19,7 +19,7 @@ async def authenticateCredentials(credentials: UserCredentials,
     """
 
     # Authenticate the user using the given credentials
-    user = authenticateUser(database.dbQueue, credentials.email, credentials.password)
+    user = authenticateUser(database.db, credentials.email, credentials.password)
     # Return a 401 if the user is not correctly authenticated
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")

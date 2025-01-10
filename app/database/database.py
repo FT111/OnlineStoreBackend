@@ -1,12 +1,28 @@
 import sqlite3
 import threading
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from queue import Queue
 
 from typing_extensions import Union
 
-localThread = threading.local()
-sqlite3.threadsafety = 1
+
+class DatabaseAdapter(ABC):
+    """
+    Abstract class for database adapters
+    Use this to adapt the system to use a different database
+    """
+    @abstractmethod
+    def execute(self, query: str, args: tuple) -> Union[list, int]:
+        pass
+
+    @abstractmethod
+    def executemany(self, query: str, args: list) -> Union[list, int]:
+        pass
+
+    @abstractmethod
+    def close(self):
+        pass
 
 
 @dataclass
@@ -16,12 +32,15 @@ class QueryTask:
     resultQueue: Queue
 
 
-class Database:
+class SQLiteAdapter(DatabaseAdapter):
     """
     Queued SQLite database handler
     Uses a single thread and connection to avoid SQlite's awful threading issues
     """
     def __init__(self, path: str) -> None:
+        localThread = threading.local()
+        sqlite3.threadsafety = 1
+
         self.query_queue = Queue()
         self.path = path
         self.connection = None
@@ -61,7 +80,11 @@ class Database:
                     # Execute the query
                     cursor = self.connection.cursor()
                     if task.args:
-                        cursor.execute(task.query, task.args)
+                        #
+                        if isinstance(task.args, list):
+                            cursor.executemany(task.query, task.args)
+                        else:
+                            cursor.execute(task.query, task.args)
                     else:
                         cursor.execute(task.query)
 
@@ -84,7 +107,7 @@ class Database:
             finally:
                 self.query_queue.task_done()
 
-    def execute(self, query: str, args: tuple = ()) -> Union[list, int]:
+    def execute(self, query: str, args: Union[tuple, list]) -> Union[list, int]:
         """
         Execute a query on the database
         :param query: An SQLite query
@@ -101,6 +124,16 @@ class Database:
             raise data
         return data
 
+    def executemany(self, query: str, args: list) -> Union[list, int]:
+        """
+        Executes multiple queries in a single transaction
+        Simple wrapper for execute for improved readability and code intent
+        :param query: An SQLite query
+        :param args: Arguments for the query
+        :return: Either the result of the query or a database error
+        """
+        return self.execute(query, args)
+
     def close(self):
         self.running = False # Stop new queries
         self.query_queue.put(None)  # Signal thread to stop
@@ -109,7 +142,7 @@ class Database:
             self.connection.close()
 
 
-dbQueue = Database('./app/database/databaseDev.db')
+db = SQLiteAdapter('./app/database/databaseDev.db')
 
 
 def createDatabase(location: str = './app/database/databaseDev.db'):
@@ -127,4 +160,4 @@ def createDatabase(location: str = './app/database/databaseDev.db'):
 
 
 def getDBSession():
-    return dbQueue
+    return db

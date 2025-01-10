@@ -20,7 +20,7 @@ async def getMe(user: Dict = Depends(userRequired),
 	Get the current user
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	userDetails = data.getUserByID(user['id'])
 
@@ -38,7 +38,7 @@ async def newUser(
 	:return: The user created
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	user = data.createUser(user)
 
@@ -60,7 +60,7 @@ async def getUser(
 	:return: 404 or the user
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	# Queries the database for the user
 	if includePrivileged and user and user['id'] == userID:
@@ -90,7 +90,7 @@ async def getUserListings(
 	:return: 404 or the user's listings
 	"""
 
-	data = DataRepository(database.dbQueue)
+	data = DataRepository(database.db)
 
 	# Queries the database for the user's listings
 	if includePrivileged and user and user['id'] == userID:

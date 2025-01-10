@@ -24,12 +24,12 @@ async def getListings(query: Optional[str] = None,
                       limit: int = 10,
                       offset: int = 0
                       ):
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     if limit > 40:
         raise HTTPException(status_code=400, detail="Limit must be less than 40")
 
-    total, listings = instances.listingsSearch.query(database.dbQueue, data,
+    total, listings = instances.listingsSearch.query(database.db, data,
                                                      query=query, offset=offset, limit=limit, category=category,
                                                      sort=sort, order=order, subCategory=subCategory)
 
@@ -58,7 +58,7 @@ async def createListing(listing: ListingSubmission,
     :return:
     """
 
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     # Get the user and category from the database
     user: User = data.getUserByID(user['id'])
@@ -91,7 +91,7 @@ async def getListing(
     :return:
     """
 
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     if includePrivileged and user:
         listingObj = data.getListingByID(listingID, includePrivileged=True, user=user)
@@ -105,7 +105,7 @@ async def getListing(
 async def updateListing(listing: ListingWithSKUs,
                         user=Depends(userRequired)):
 
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     verifyListingOwnership(data, listing.id, user)
     if user['id'] != listing.ownerUser.id:
@@ -122,7 +122,7 @@ async def updateSKU(sku: SKUWithStock,
                     listingID: str,
                     user=Depends(userRequired)):
 
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     # Check if the user owns the listing - 401s if not
     listing = verifyListingOwnership(data, listingID, user)
@@ -141,7 +141,7 @@ async def createSKU(sku: SKUSubmission,
                     listingID: str,
                     user=Depends(userRequired)):
 
-    data = DataRepository(database.dbQueue)
+    data = DataRepository(database.db)
 
     verifyListingOwnership(data, listingID, user)
 
