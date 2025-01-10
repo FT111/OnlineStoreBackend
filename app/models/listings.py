@@ -73,6 +73,12 @@ class SKUSubmission(BaseModel):
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
     stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
+    @field_validator("title")
+    def validate_title(cls, value):
+        if len(value) < 1 or len(value) > 30:
+            raise ValueError('Title must be between 1 and 30 characters')
+        return value
+
     @field_validator("price")
     def validate_price(cls, value):
         if int(value) <= 0:

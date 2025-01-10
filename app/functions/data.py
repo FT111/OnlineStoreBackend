@@ -96,6 +96,8 @@ class DataRepository:
 		:return:
 		"""
 		category = Queries.Categories.getCategory(self.conn, title)
+		if not category:
+			raise HTTPException(status_code=404, detail="Category not found")
 		category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
 
 		return category
