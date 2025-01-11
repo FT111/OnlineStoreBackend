@@ -3,8 +3,8 @@ import sqlite3
 
 from typing_extensions import List, Union, Optional
 
-from app.database.database import Database
-from app.models.listings import Listing, SKUWithStock
+from app.database.database import SQLiteAdapter, DatabaseAdapter
+from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
 
 listingBaseQuery = """
 SELECT
@@ -105,17 +105,17 @@ class Queries:
     """
     class Users:
         @staticmethod
-        def getUserByEmail(cursor: callable, email: str) -> sqlite3.Row:
+        def getUserByEmail(cursor: DatabaseAdapter, email: str) -> sqlite3.Row:
             """
             Get a user by their email
             """
-            
+
             result = cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
             user = result[0]
             return user
 
         @staticmethod
-        def getUserByID(cursor: callable, userID: str) -> sqlite3.Row:
+        def getUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
             """
             Get a user by their ID
             """
@@ -132,14 +132,14 @@ class Queries:
                 
                 FROM users Us
                 WHERE id = ?"""
-            
+
             result = cursor.execute(query, (userID,))
             user = result[0]
 
             return user
 
         @staticmethod
-        def addUser(cursor: callable, user: dict):
+        def addUser(cursor: DatabaseAdapter, user: dict):
             """
             Adds a user to the database
             :param cursor:
@@ -147,20 +147,20 @@ class Queries:
             :return:
             """
 
-            
+
             cursor.execute("""
             INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
             VALUES (?,?,?,?,?,?,?,?)
             """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
                            user['passwordSalt'], user['joinedAt'],))
-            
+
 
         @staticmethod
-        def getPrivilegedUserByID(cursor: callable, userID: str) -> sqlite3.Row:
+        def getPrivilegedUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
             """
             Get a privileged user by their ID
             """
-            
+
             result = cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
             user = result[0]
             return user
@@ -175,34 +175,80 @@ class Queries:
             :param listing:
             :return:
             """
-            
+
             result = cursor.execute("""
             INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
             VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
             """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
                   listing.addedAt, 0, 0, listing.subCategory,))
-            
 
         @staticmethod
-        def updateListing(cursor: callable, listing: Listing):
+        def updateListing(cursor: DatabaseAdapter, listing: ListingWithSKUs):
             """
             Update a listing in the database
             """
-            
+
             cursor.execute("""
             UPDATE listings
             SET title = ?, description = ?, public = ?, 
             subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
             WHERE id = ?
             """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
-            
+
+            # # Delete existing variation options types/values
+            # cursor.execute("DELETE FROM skuValues WHERE skuTypeID IN (SELECT id FROM skuTypes WHERE listingID = ?)", (listing.id,))
+            # cursor.execute("DELETE FROM skuTypes WHERE listingID = ?", (listing.id,))
+
+            if listing.skuOptions:
+                existingSKUTypes = cursor.execute("SELECT id, title FROM skuTypes WHERE listingID = ?", (listing.id,))
+                existingSKUValues = cursor.execute("SELECT id, title, skuTypeID FROM skuValues"
+                                                   " WHERE skuTypeID IN "
+                                                   "(SELECT id FROM skuTypes WHERE listingID = ?)", (listing.id,))
+
+                if existingSKUTypes:
+                    # Delete existing options if not being defined
+                    cursor.execute(f"""
+                    DELETE FROM skuTypes WHERE id in ({','.join('?' * len(existingSKUTypes))})
+                    """, ([skuType for skuType in existingSKUTypes if skuType not in listing.skuOptions.keys()],))
+
+                if existingSKUValues:
+                    # Delete existing values if not being defined
+                    cursor.execute(f"""
+                    DELETE FROM skuValues WHERE id in ({','.join('?' * len(existingSKUValues))})
+                    """, ([skuValue for skuValue in existingSKUValues if skuValue not in listing.skuOptions.values()],))
+
+                # Add new option types if not already existing
+                addedSKUTypes = [(skuType, listing.id) for skuType in listing.skuOptions.keys() if skuType not in existingSKUTypes]
+
+                if addedSKUTypes:
+                    cursor.executemany("""
+                    INSERT INTO skuTypes (title, listingID)
+                    VALUES (?, ?)
+                    """, addedSKUTypes)
+
+                # Add new option values if not already existing
+                # Transform skuValues to (title, skuTypeTitle)
+                addedSKUValues = [(value, skuType, listing.id) for skuType, values in listing.skuOptions.items() for value in values if value not in existingSKUValues]
+
+                if addedSKUValues:
+                    cursor.executemany("""
+                    INSERT INTO skuValues (title, skuTypeID)
+                    VALUES (?, (SELECT id FROM skuTypes WHERE title = ? AND listingID = ?))
+                    """, addedSKUValues)
+
+                # # Find SKUs with invalid options
+                # cursor.execute("""
+                # DELETE FROM skuOptions
+                # WHERE valueID NOT IN (SELECT id FROM skuValues)
+                # AND skuID IN (SELECT id FROM skus WHERE listingID = ?)
+                # """, (listing.id,))
 
         @staticmethod
-        def updateSKU(cursor: callable, sku: SKUWithStock):
+        def updateSKU(cursor: DatabaseAdapter, sku: SKUWithStock):
             """
             Update a SKU in the database
             """
-            
+
             result = cursor.execute("""
             UPDATE skus
             SET title = ?, price = ?, discount = ?, stock = ?
@@ -228,11 +274,11 @@ class Queries:
                     """, (optionTuple[0], optionTuple[1],))
 
         @staticmethod
-        def addSKU(cursor: callable, sku: SKUWithStock, listingID: str):
+        def addSKU(cursor: DatabaseAdapter, sku: SKUWithStock, listingID: str):
             """
             Add a SKU to the database
             """
-            
+
             result = cursor.execute("""
             INSERT INTO skus (id, listingID, title, price, discount, stock)
             VALUES (?,?,?,?,?,?)
@@ -252,18 +298,18 @@ class Queries:
                 """, options)
 
         @staticmethod
-        def getListingIDsByUsername(cursor: callable, username: str) -> List[int]:
+        def getListingIDsByUsername(cursor: DatabaseAdapter, username: str) -> List[int]:
             """
             Get a list of listing IDs by a username
             """
-            
+
             result = cursor.execute("SELECT id FROM listings WHERE ownerID ="
                            " (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
             listings = result
             return listings
 
         @staticmethod
-        def getListingsSince(cursor: callable, timestamp: int) -> List[sqlite3.Row]:
+        def getListingsSince(cursor: DatabaseAdapter, timestamp: int) -> List[sqlite3.Row]:
             """
             Returns all rows since the timestamp.
             """
@@ -290,7 +336,7 @@ class Queries:
             return result
 
         @staticmethod
-        def getListingsByIDs(cursor: callable, listingIDs: list) -> list:
+        def getListingsByIDs(cursor: DatabaseAdapter, listingIDs: list) -> list:
             """
             Get a listing by its ID
             """
@@ -303,9 +349,9 @@ class Queries:
             return result
 
         @staticmethod
-        def getListingByID(cursor: Database, listingID: str,
-                           includePrivileged: bool = False,
-                           requestUserID=None) -> Union[sqlite3.Row, None]:
+        def getListingByID(cursor: SQLiteAdapter, listingID: str,
+						   includePrivileged: bool = False,
+						   requestUserID=None) -> Union[sqlite3.Row, None]:
             """
             Get a listing by its ID, with associated SKUs
             """
@@ -319,7 +365,7 @@ class Queries:
                 result = cursor.execute(query, (listingID, requestUserID))
             else:
                 result = cursor.execute(query, (listingID,))
-                
+
             if not result:
                 return None
             return result[0]
@@ -332,13 +378,12 @@ class Queries:
             WHERE Li.ownerID = ?
             """ + ("" if includePrivileged else "AND Li.public = 1"))
 
-
             result = cursor.execute(query, (userID,))
             listing = result
             return listing
 
         @staticmethod
-        def getSKUByOptions(cursor: callable, options: dict, listingID: str) -> Optional[sqlite3.Row]:
+        def getSKUByOptions(cursor: DatabaseAdapter, options: dict, listingID: str) -> Optional[sqlite3.Row]:
             """
             Get a SKU by its options
             """
@@ -358,7 +403,7 @@ class Queries:
 
     class Categories:
         @staticmethod
-        def getCategory(cursor: callable, title) -> sqlite3.Row:
+        def getCategory(cursor: DatabaseAdapter, title) -> sqlite3.Row:
             """
             Returns a single category specified by a title
             :param cursor:
@@ -385,12 +430,10 @@ class Queries:
             return result[0] if result else None
 
         @staticmethod
-        def getAllCategories(cursor: callable) -> List[sqlite3.Row]:
+        def getAllCategories(cursor: DatabaseAdapter) -> List[sqlite3.Row]:
             """
             Returns all categories.
             """
-
-
 
             result = cursor.execute(f"""SELECT id, title, description, colour,
                                 (
@@ -408,11 +451,11 @@ class Queries:
             return result
 
         @staticmethod
-        def getCategoryBySubcategoryTitle(cursor: callable, subcategory: str) -> sqlite3.Row:
+        def getCategoryBySubcategoryTitle(cursor: DatabaseAdapter, subcategory: str) -> sqlite3.Row:
             """
             Get the category of a subcategory
             """
-            
+
             result = cursor.execute("""
             SELECT Ca.id, Ca.title, Ca.description, Ca.colour
             FROM categories Ca
