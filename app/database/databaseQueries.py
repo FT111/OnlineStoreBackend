@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from collections import defaultdict
 
 from typing_extensions import List, Union, Optional
 
@@ -200,25 +201,36 @@ class Queries:
             # cursor.execute("DELETE FROM skuTypes WHERE listingID = ?", (listing.id,))
 
             if listing.skuOptions:
-                existingSKUTypes = cursor.execute("SELECT id, title FROM skuTypes WHERE listingID = ?", (listing.id,))
-                existingSKUValues = cursor.execute("SELECT id, title, skuTypeID FROM skuValues"
-                                                   " WHERE skuTypeID IN "
-                                                   "(SELECT id FROM skuTypes WHERE listingID = ?)", (listing.id,))
+                existingSKUTypes = cursor.execute("SELECT title FROM skuTypes WHERE listingID = ?", (listing.id,))
+                existingSKUValues = cursor.execute("SELECT skV.title, skT.title as typeTitle FROM skuValues skV"
+                                                   " JOIN skuTypes skT ON skT.id = skuTypeID"
+                                                   " WHERE skT.listingID = ?", (listing.id,))
 
-                if existingSKUTypes:
+                # Remove existing options if not being defined
+                listingSkuOptionKeys = listing.skuOptions.keys()
+                listingSkuOptionValues = listing.skuOptions.values()
+                skuTypesToRemove = [skuType['title'] for skuType in existingSKUTypes
+                                    if skuType['title'] not in listing.skuOptions.keys()]
+
+                newSKUOptions = defaultdict(list, listing.skuOptions)
+                skuValuesToRemove = [skuValue['title'] for skuValue in existingSKUValues
+                                     if skuValue['title'] not in newSKUOptions[skuValue['typeTitle']]]
+
+                if skuTypesToRemove:
                     # Delete existing options if not being defined
                     cursor.execute(f"""
-                    DELETE FROM skuTypes WHERE id in ({','.join('?' * len(existingSKUTypes))})
-                    """, ([skuType for skuType in existingSKUTypes if skuType not in listing.skuOptions.keys()],))
+                    DELETE FROM skuTypes WHERE title in ({','.join('?' * len(skuTypesToRemove))})
+                    AND listingID = ?
+                    """, tuple(skuTypesToRemove))
 
-                if existingSKUValues:
+                if skuValuesToRemove:
                     # Delete existing values if not being defined
                     cursor.execute(f"""
-                    DELETE FROM skuValues WHERE id in ({','.join('?' * len(existingSKUValues))})
-                    """, ([skuValue for skuValue in existingSKUValues if skuValue not in listing.skuOptions.values()],))
+                    DELETE FROM skuValues WHERE title in ({','.join('?' * len(skuValuesToRemove))})
+                    """, tuple(skuValuesToRemove))
 
                 # Add new option types if not already existing
-                addedSKUTypes = [(skuType, listing.id) for skuType in listing.skuOptions.keys() if skuType not in existingSKUTypes]
+                addedSKUTypes = [(skuType, listing.id) for skuType in listing.skuOptions.keys() if skuType not in map(lambda x: x['title'], existingSKUTypes)]
 
                 if addedSKUTypes:
                     cursor.executemany("""
@@ -227,8 +239,9 @@ class Queries:
                     """, addedSKUTypes)
 
                 # Add new option values if not already existing
-                # Transform skuValues to (title, skuTypeTitle)
-                addedSKUValues = [(value, skuType, listing.id) for skuType, values in listing.skuOptions.items() for value in values if value not in existingSKUValues]
+                # Transform skuValues to (title, skuTypeTitle, listingID)
+                addedSKUValues = [(value, skuType, listing.id) for skuType, values in listing.skuOptions.items()
+                                  for value in values if value not in map(lambda x: x['title'], existingSKUValues)]
 
                 if addedSKUValues:
                     cursor.executemany("""
