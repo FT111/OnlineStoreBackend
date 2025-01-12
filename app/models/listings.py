@@ -32,8 +32,8 @@ class SKU(BaseModel):
     @classmethod
     @field_validator("discount")
     def validate_discount(cls, value):
-        if value is not None and (value < 1 or value > 99):
-            raise ValueError('Discount must be between 1 and 99')
+        if value is not None and (value < 0 or value > 99):
+            raise ValueError('Discount must be between 0 and 99')
         return value
 
     # def __init__(self, *args, **data):
@@ -69,7 +69,8 @@ class SKUSubmission(BaseModel):
     """
     title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
     images: List[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
-    price: str = Annotated[str, Field(..., title="Product Price", description="The price of the product SKU")]
+    price: int = Annotated[int, Field(..., title="Product Price",
+                                      description="The price of the product SKU. Stored as an integer *100")]
     discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
     stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
@@ -87,8 +88,8 @@ class SKUSubmission(BaseModel):
 
     @field_validator("discount")
     def validate_discount(cls, value):
-        if value is not None and (value < 1 or value > 99):
-            raise ValueError('Discount must be between 1 and 99')
+        if value is not None and (value < 0 or value > 99):
+            raise ValueError('Discount must be between 0 and 99')
         return value
 
     @field_validator("stock")
