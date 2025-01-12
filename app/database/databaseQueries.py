@@ -212,14 +212,17 @@ class Queries:
                 skuTypesToRemove = [skuType['title'] for skuType in existingSKUTypes
                                     if skuType['title'] not in listing.skuOptions.keys()]
 
+                # Remove existing values if not being redefined.
+                # Compares existing values with new values
                 newSKUOptions = defaultdict(list, listing.skuOptions)
                 skuValuesToRemove = [skuValue['title'] for skuValue in existingSKUValues
                                      if skuValue['title'] not in newSKUOptions[skuValue['typeTitle']]]
 
                 if skuTypesToRemove:
+                    skuTypesToRemove.append(listing.id)
                     # Delete existing options if not being defined
                     cursor.execute(f"""
-                    DELETE FROM skuTypes WHERE title in ({','.join('?' * len(skuTypesToRemove))})
+                    DELETE FROM skuTypes WHERE title in ({','.join('?' * (len(skuTypesToRemove)-1))})
                     AND listingID = ?
                     """, tuple(skuTypesToRemove))
 

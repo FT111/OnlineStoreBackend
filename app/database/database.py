@@ -13,11 +13,11 @@ class DatabaseAdapter(ABC):
     Use this to adapt the system to use a different database
     """
     @abstractmethod
-    def execute(self, query: str, args: tuple) -> Union[list, int]:
+    def execute(self, query: str, args: tuple = None) -> Union[list, int]:
         pass
 
     @abstractmethod
-    def executemany(self, query: str, args: list) -> Union[list, int]:
+    def executemany(self, query: str, args: list = None) -> Union[list, int]:
         pass
 
     @abstractmethod
