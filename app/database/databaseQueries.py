@@ -473,7 +473,16 @@ class Queries:
             """
 
             result = cursor.execute("""
-            SELECT Ca.id, Ca.title, Ca.description, Ca.colour
+            SELECT Ca.id, Ca.title, Ca.description, Ca.colour,
+                (
+                SELECT json_group_array(
+                    json_object(
+                        'id', sCa.id,
+                        'title', sCa.title
+                    ) )
+                FROM subCategories sCa
+                WHERE sCa.categoryID = Ca.id
+                ) AS subCategories
             FROM categories Ca
             JOIN subCategories sCa ON sCa.categoryID = Ca.id
             WHERE sCa.title = ?
