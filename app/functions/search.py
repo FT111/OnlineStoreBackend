@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing_extensions import Optional
 
 from .data import DataRepository
+from .utils import quickSort
 from ..database.database import SQLiteAdapter
 from ..database.databaseQueries import Queries
 from ..models.listings import Listing
@@ -201,16 +202,16 @@ class ListingSearch(Search):
 			sort = sort.lower()
 
 		if sort == 'price':
-			sortedListings = sorted(listings,
+			sortedListings = quickSort(listings,
 									key=lambda listing: listing['basePrice'] if listing['basePrice'] is not None else 0,
 									reverse=reverse)
 		elif sort == 'rating':
-			sortedListings = sorted(listings, key=lambda listing: listing['rating'], reverse=reverse)
+			sortedListings = quickSort(listings, key=lambda listing: listing['rating'], reverse=reverse)
 		elif sort == 'views':
-			sortedListings = sorted(listings, key=lambda listing: listing['views'], reverse=reverse)
+			sortedListings = quickSort(listings, key=lambda listing: listing['views'], reverse=reverse)
 		elif sort == 'trending':
 			currentTime = int(time.time())
-			sortedListings = sorted(listings, key=lambda listing: (
+			sortedListings = quickSort(listings, key=lambda listing: (
 																		  currentTime - listing['addedAt']) / listing['views'] if listing['views'] > 0 else 1,
 									reverse=reverse)
 		else:
