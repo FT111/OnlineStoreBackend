@@ -12,6 +12,7 @@ SELECT
     Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
     Ca.title AS category,
     sCa.title AS subCategory,
+    Co.title AS condition,
     json_object(
         'id', Us.id,
         'username', Us.username,
@@ -95,6 +96,7 @@ LEFT JOIN users Us ON Us.id = Li.ownerID
 LEFT JOIN skus Sk ON Sk.listingID = Li.id
 LEFT JOIN skuImages SkIm ON SkIm.skuID = (SELECT Sk.id FROM skus Sk WHERE Sk.listingID = Li.id LIMIT 1)
 LEFT JOIN listingEvents Ev ON Ev.listingID = Li.id AND Ev.eventType = 'view'
+LEFT JOIN conditions Co ON Co.id = Li.conditionID
 {}
 GROUP BY Li.id, Ca.title, sCa.title, Us.id
             """
@@ -195,10 +197,6 @@ class Queries:
             subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
             WHERE id = ?
             """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
-
-            # # Delete existing variation options types/values
-            # cursor.execute("DELETE FROM skuValues WHERE skuTypeID IN (SELECT id FROM skuTypes WHERE listingID = ?)", (listing.id,))
-            # cursor.execute("DELETE FROM skuTypes WHERE listingID = ?", (listing.id,))
 
             if listing.skuOptions:
                 existingSKUTypes = cursor.execute("SELECT title FROM skuTypes WHERE listingID = ?", (listing.id,))
@@ -399,11 +397,23 @@ class Queries:
             return listing
 
         @staticmethod
+        def getListingsBySKUids(cursor: DatabaseAdapter, skuIDs: list) -> List[sqlite3.Row]:
+            """
+            Get a list of listings by their SKU IDs
+            """
+
+            query = listingBaseQuery.format("""
+            WHERE Sk.id IN ({})
+            """.format(','.join('?' * len(skuIDs))))
+
+            result = cursor.execute(query, tuple(skuIDs,))
+            return result
+
+        @staticmethod
         def getSKUByOptions(cursor: DatabaseAdapter, options: dict, listingID: str) -> Optional[sqlite3.Row]:
             """
             Get a SKU by its options
             """
-
 
             jsonOptions = json.dumps(options)
             query = """

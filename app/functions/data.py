@@ -13,7 +13,8 @@ from app.database.databaseQueries import Queries
 from app.functions import auth
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
-	SKUSubmission
+	SKUSubmission, SKU
+from app.models.transactions import Basket, EnrichedBasket
 from app.models.users import User, PrivilegedUser, UserDetail
 
 
@@ -323,3 +324,38 @@ class DataRepository:
 		category = Category(**dict({**category, 'subCategories': json.loads(category['subCategories'])}))
 
 		return category
+
+	def enrichBasket(self, basket: Basket) -> EnrichedBasket:
+		"""
+		Enrich a basket with associated SKUs and listings
+		:param basket:
+		:return:
+		"""
+		# Get the SKUs from the database
+		skuIDs = list(basket.items.keys())
+		listings = Queries.Listings.getListingsBySKUids(self.conn, skuIDs)
+		castedListings = self.formatListingRows(listings)
+
+		# Transform listings to dict<relevantskuID, Listing>
+		listingDict: dict[str, dict] = {}
+		for listing in castedListings:
+			for sku in listing['skus']:
+				listingDict[sku.id] = listing
+
+		# Transform SKU ids to full SKU objects, from the listing
+		for skuID in basket.items:
+			basket.items[skuID]['sku'] = [sku for sku in listingDict[skuID]['skus'] if sku.id == skuID][0]
+
+		# Convert to EnrichedBasket model
+		enrichedBasket = EnrichedBasket(
+			items={
+				skuID: {
+					'quantity': basket.items[skuID]['quantity'],
+					'sku': SKU(**dict(basket.items[skuID]['sku'])),
+					'listing': Listing(**listingDict[skuID])
+				}
+				for skuID in basket.items
+			}
+		)
+
+		return enrichedBasket
