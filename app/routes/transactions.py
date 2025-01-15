@@ -1,12 +1,8 @@
 from fastapi import APIRouter
-
-from app.models.transactions import Basket, Response
-from app.functions.data import DataRepository
-from ..database import database
-from fastapi import APIRouter
+from typing_extensions import Union
 
 from app.functions.data import DataRepository
-from app.models.transactions import Basket, Response
+from app.models.transactions import Basket, Response, EnrichedBasket
 from ..database import database
 
 router = APIRouter(prefix="/transactions", tags=["Transactions", "Sales"])
@@ -14,7 +10,7 @@ router = APIRouter(prefix="/transactions", tags=["Transactions", "Sales"])
 
 @router.post('/basket/enrich', response_model=Response.EnrichedBasketResponse)
 async def enrichBasket(
-		basket: Basket,
+		basket: Union[Basket, EnrichedBasket],
 ):
 	"""
 	Enrich a basket with associated SKUs and listings
