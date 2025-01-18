@@ -151,13 +151,11 @@ class Queries:
             :return:
             """
 
-
             cursor.execute("""
             INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
             VALUES (?,?,?,?,?,?,?,?)
             """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
                            user['passwordSalt'], user['joinedAt'],))
-
 
         @staticmethod
         def getPrivilegedUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:

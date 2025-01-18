@@ -387,9 +387,36 @@ class DataRepository:
 				Queries.Analytics.registerEvent(self.conn, click)
 				break
 			except sqlite3.IntegrityError:
+				print('It finally happened')
 				continue
 
 		return click
+
+	def registerListingView(self, listingID, userID: Optional[str] = None):
+		"""
+		Register a view on a listing
+		:param userID: The ID of the user that viewed the listing, if logged in
+		:param listingID:
+		:return:
+		"""
+
+		while True:
+			view = Events.ListingView(
+				id=str(uuid4()),
+				userID=userID,
+				listingID=listingID,
+				time=int(time.time())
+			)
+
+			# Attempt to register the event
+			# If the event id already exists, generate a new ID and try again
+			try:
+				Queries.Analytics.registerEvent(self.conn, view)
+				break
+			except sqlite3.IntegrityError:
+				continue
+
+		return view
 
 
 
