@@ -11,6 +11,7 @@ from typing_extensions import Optional
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
+from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU
@@ -328,6 +329,7 @@ class DataRepository:
 	def enrichBasket(self, basket: Basket) -> EnrichedBasket:
 		"""
 		Enrich a basket with associated SKUs and listings
+		Transforms a basket of SKU IDs into a basket of full SKU objects
 		:param basket:
 		:return:
 		"""
@@ -359,3 +361,35 @@ class DataRepository:
 		)
 
 		return enrichedBasket
+
+	def registerListingClick(self, listingID, userID: Optional[str] = None):
+		"""
+		Register a click on a listing
+		:param userID: The ID of the user clicking the listing, if logged in
+		:param listingID:
+		:return:
+		"""
+
+		while True:
+			click = Events.ListingClick(
+				id=str(uuid4()),
+				userID=userID,
+				listingID=listingID,
+				time=int(time.time())
+
+			)
+
+			# Attempt to register the event
+			# If the event id already exists, generate a new ID and try again
+			# Handles the incredibly unlikely event of a UUID collision
+			try:
+				Queries.Analytics.registerEvent(self.conn, click)
+				break
+			except NameError:
+				continue
+
+		return click
+
+
+
+

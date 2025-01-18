@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing_extensions import List, Union, Optional
 
 from app.database.database import SQLiteAdapter, DatabaseAdapter
+from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
 
 listingBaseQuery = """
@@ -427,6 +428,18 @@ class Queries:
                 return None
             return result[0]
 
+    class Analytics:
+        @staticmethod
+        def registerEvent(conn: DatabaseAdapter, event: Events.Event):
+            """
+            Add a click event to a listing
+            """
+
+            conn.execute("""
+            INSERT INTO listingEvents (id, listingID, eventType, userID, addedAt)
+            VALUES (?,?,?,?,?)
+            """, (event.id, event.listingID, str(event), event.userID, event.time))
+
     class Categories:
         @staticmethod
         def getCategory(cursor: DatabaseAdapter, title) -> sqlite3.Row:
@@ -436,8 +449,6 @@ class Queries:
             :param title:
             :return:
             """
-
-
 
             result = cursor.execute(f"""SELECT id, title, description, colour,
                                 (
