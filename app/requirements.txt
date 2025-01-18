@@ -3,3 +3,4 @@ fastapi
 uvicorn
 sqlite3
 cachelib
+slowapi
