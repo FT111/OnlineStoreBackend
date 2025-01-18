@@ -13,9 +13,9 @@ class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-
         # If the user has not consented to analytics, return the response prior to processing
-        if request.headers.get('x-analytics-consent') != 'true':
+        if (request.headers.get('x-analytics-consent') != 'true'
+                and not request.method == 'OPTIONS'):
 
             # Gates analytics processing endpoints
             if request.url.path.startswith(analyticsRouterPrefix):
@@ -23,6 +23,7 @@ class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
 
             response = await call_next(request)
             return response
+
         # If the user has consented to analytics, process the request
 
         response = await call_next(request)
