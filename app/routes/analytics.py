@@ -16,7 +16,7 @@ router = APIRouter(prefix=routerPrefix, tags=["Analytics"])
 
 
 @router.post("/{listingID}/click", response_model=Response.ConfirmationResponse)
-@rateLimiter.limit("3/minute")
+@rateLimiter.limit("4/minute")
 def registerClick(listingID: str,
 				  request: Request,
 				  user: User = Depends(userOptional)):
@@ -30,7 +30,8 @@ def registerClick(listingID: str,
 	"""
 	data = DataRepository(database.db)
 
-	click: Events.ListingClick = data.registerListingClick(listingID)
+	click: Events.ListingClick = data.registerListingClick(listingID,
+														   user['id'] if user else None)
 
 	return Response.ConfirmationResponse(meta={
 		'registered': True

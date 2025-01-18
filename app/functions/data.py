@@ -1,5 +1,6 @@
 import base64
 import json
+import sqlite3
 import time
 from typing import List, Union
 from uuid import uuid4
@@ -365,7 +366,7 @@ class DataRepository:
 	def registerListingClick(self, listingID, userID: Optional[str] = None):
 		"""
 		Register a click on a listing
-		:param userID: The ID of the user clicking the listing, if logged in
+		:param userID: The ID of the user that clicked the listing, if logged in
 		:param listingID:
 		:return:
 		"""
@@ -385,7 +386,7 @@ class DataRepository:
 			try:
 				Queries.Analytics.registerEvent(self.conn, click)
 				break
-			except NameError:
+			except sqlite3.IntegrityError:
 				continue
 
 		return click
