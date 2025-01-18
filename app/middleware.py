@@ -1,7 +1,32 @@
 from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.responses import Response, JSONResponse
 
 from app.functions.auth import validateToken
+from app.routes.analytics import routerPrefix as analyticsRouterPrefix
+
+
+class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware for handling analytics
+    """
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+
+        # If the user has not consented to analytics, return the response prior to processing
+        if request.headers.get('x-analytics-consent') != 'true':
+
+            # Gates analytics processing endpoints
+            if request.url.path.startswith(analyticsRouterPrefix):
+                return JSONResponse(status_code=403, content={'detail': 'Analytics consent required'})
+
+            response = await call_next(request)
+            return response
+        # If the user has consented to analytics, process the request
+
+        response = await call_next(request)
+        return response
 
 
 class GetUserMiddleware(BaseHTTPMiddleware):
