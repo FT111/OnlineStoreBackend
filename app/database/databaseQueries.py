@@ -444,6 +444,19 @@ class Queries:
             VALUES (?,?,?,?,?)
             """, (event.id, event.listingID, str(event), event.userID, event.time))
 
+        @staticmethod
+        def registerEvents(conn: DatabaseAdapter, events: List[Events.Event]):
+            """
+            Add multiple events to the database
+            """
+
+            # Convert events to a list of tuples ready for a SQL query
+            eventTuples = [(event.id, event.listingID, str(event), event.userID, event.time) for event in events]
+            conn.executemany("""
+            INSERT INTO listingEvents (id, listingID, eventType, userID, addedAt)
+            VALUES (?,?,?,?,?)
+            """, eventTuples)
+
     class Categories:
         @staticmethod
         def getCategory(cursor: DatabaseAdapter, title) -> sqlite3.Row:

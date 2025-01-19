@@ -8,7 +8,7 @@ from uuid import uuid4
 import bcrypt
 import pydantic
 from fastapi import HTTPException
-from typing_extensions import Optional
+from typing_extensions import Optional, Type
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
@@ -364,16 +364,17 @@ class DataRepository:
 
 		return enrichedBasket
 
-	def registerListingClick(self, listingID, userID: Optional[str] = None):
+	def registerListingEvent(self, eventType: Type[Events.Event], listingID, userID: Optional[str] = None) -> Type[Events.Event]:
 		"""
 		Register a click on a listing
+		:param eventType: The type of event to register
 		:param userID: The ID of the user that clicked the listing, if logged in
 		:param listingID:
 		:return:
 		"""
 
 		while True:
-			click = Events.ListingClick(
+			event = eventType(
 				id=str(uuid4()),
 				userID=userID,
 				listingID=listingID,
@@ -385,40 +386,24 @@ class DataRepository:
 			# If the event id already exists, generate a new ID and try again
 			# Handles the incredibly unlikely event of a UUID collision
 			try:
-				Queries.Analytics.registerEvent(self.conn, click)
+				Queries.Analytics.registerEvent(self.conn, event)
 				break
 			except sqlite3.IntegrityError:
 				print('It finally happened')
 				continue
 
-		return click
+		return event
 
-	def registerListingView(self, listingID, userID: Optional[str] = None):
+	def registerListingEvents(self, events: List[Type[Events.Event]]) -> List[Type[Events.Event]]:
 		"""
-		Register a view on a listing
-		:param userID: The ID of the user that viewed the listing, if logged in
-		:param listingID:
+		Register multiple events
+		:param events: List of events
 		:return:
 		"""
 
-		while True:
-			view = Events.ListingView(
-				id=str(uuid4()),
-				userID=userID,
-				listingID=listingID,
-				time=int(time.time())
-			)
+		Queries.Analytics.registerEvents(self.conn, events)
 
-			# Attempt to register the event
-			# If the event id already exists, generate a new ID and try again
-			try:
-				Queries.Analytics.registerEvent(self.conn, view)
-				break
-			except sqlite3.IntegrityError:
-				continue
-
-		return view
-
+		return events
 
 
 
