@@ -10,7 +10,7 @@ from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
 
 listingBaseQuery = """
 SELECT
-    Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.views, Li.public,
+    Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.public,
     Ca.title AS category,
     sCa.title AS subCategory,
     Co.title AS condition,
@@ -89,14 +89,20 @@ SELECT
         WHEN count(Sk.id) > 1 THEN 1
         ELSE 0
     END AS multipleSKUs,
-    count(Ev.id) AS views
+    (SELECT count(Ev.id) FROM listingEvents Ev
+    WHERE Ev.listingID = Li.id
+    AND Ev.eventType = 'view')
+    AS views,
+    (SELECT count(Ev.id) FROM listingEvents Ev
+    WHERE Ev.listingID = Li.id
+    AND Ev.eventType = 'click')
+    AS clicks
 FROM listings Li
 LEFT JOIN subCategories sCa ON sCa.id = Li.subCategoryID
 LEFT JOIN categories Ca ON Ca.id = sCa.categoryID
 LEFT JOIN users Us ON Us.id = Li.ownerID
 LEFT JOIN skus Sk ON Sk.listingID = Li.id
 LEFT JOIN skuImages SkIm ON SkIm.skuID = (SELECT Sk.id FROM skus Sk WHERE Sk.listingID = Li.id LIMIT 1)
-LEFT JOIN listingEvents Ev ON Ev.listingID = Li.id AND Ev.eventType = 'view'
 LEFT JOIN conditions Co ON Co.id = Li.conditionID
 {}
 GROUP BY Li.id, Ca.title, sCa.title, Us.id
