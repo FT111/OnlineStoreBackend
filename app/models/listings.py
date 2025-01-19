@@ -159,13 +159,14 @@ class ListingWithSKUs(Listing):
                                               description="The options for a listing's SKU, paired with the option type")
 
 
-class ListingWithSales(Listing):
+class ListingWithSales(ListingWithSKUs):
     """
     Contains private data, inherits from Listing. For sellers
+    Also used to show statistics on a listing
     """
-    skus: Optional[List[SKUWithStock]] = Field(..., title="Product SKUs", description="The SKUs of the product listing")
-    skuOptions: Dict[str, List[str]] = Field({}, title="SKU Options",
-                                              description="The options for a listing's SKU, paired with the option type")
+    skus: Optional[List[SKUWithStock]] = Field(..., title="Product SKUs",
+                                               description="The SKUs of the product listing")
+    clicks: int = Field(0, title="Product Clicks", description="The number of clicks on the product listing")
 
     # sales: int = Field(0, title="Product Sales", description="The number of sales of the product listing")
     # revenue: float = Field(0, title="Product Revenue", description="The revenue of the product listing")

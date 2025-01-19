@@ -166,8 +166,9 @@ class DataRepository:
 
 		listings = Queries.Listings.getListingsByUserID(self.conn, userID, includePrivileged=includePrivileged, )
 		castedListings = self.formatListingRows(listings)
+		listingModel = ListingWithSales if includePrivileged else Listing
 
-		modelListings = [Listing(**dict(listing)) for listing in castedListings]
+		modelListings = [listingModel(**dict(listing)) for listing in castedListings]
 
 		return modelListings
 
