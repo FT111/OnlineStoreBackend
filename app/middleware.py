@@ -1,21 +1,32 @@
+import sqlite3
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response, JSONResponse
 
+from app.database import database
+from app.functions.analytics import Impressions
 from app.functions.auth import validateToken
+from app.functions.data import DataRepository
 from app.routes.analytics import routerPrefix as analyticsRouterPrefix
 
 
 class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
     """
     Middleware for handling analytics
+    Needs to run after a user has been added to the request state
     """
     async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
+        self, request: Request, call_next: RequestResponseEndpoint,
+
     ) -> Response:
+
+        # If the request is an OPTIONS request, return the response prior to processing
+        if request.method == 'OPTIONS':
+            return await call_next(request)
+
         # If the user has not consented to analytics, return the response prior to processing
-        if (request.headers.get('x-analytics-consent') != 'true'
-                and not request.method == 'OPTIONS'):
+        if request.headers.get('x-analytics-consent') != 'true':
 
             # Gates analytics processing endpoints
             if request.url.path.startswith(analyticsRouterPrefix):
@@ -24,9 +35,25 @@ class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
 
-        # If the user has consented to analytics, process the request
+        # --v---v---v--- If the user has consented to analytics, process the request --v---v---v---v---v---v---v---v-
+
+        data = DataRepository(database.db)
+
+        # Retrieve the impressions from the request
+        while True:
+            try:
+                impressions = Impressions.retrieveImpressionsFromRequest(request, getattr(request.state, 'user', None))
+                if not impressions:
+                    break
+
+                # Add the impressions to the database
+                data.registerListingEvents(impressions)
+                break
+            except sqlite3.IntegrityError:
+                continue
 
         response = await call_next(request)
+        response.set_cookie('listing_impressions', '', max_age=0)
         return response
 
 
@@ -37,8 +64,8 @@ class GetUserMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
 
         # Get the bearer header from the request
+        # The american spelling because it's the standard for JWT :(
         authHeader = request.headers.get('Authorization')
-        print('authHeader', authHeader)
 
         # Get the JWT token from the header
         JWT = authHeader.split(' ')[1] if authHeader else None
@@ -54,6 +81,7 @@ class GetUserMiddleware(BaseHTTPMiddleware):
             request.state.user = None
 
         print(request.cookies)
+        print(request.state)
 
         # Continue the request
         response = await call_next(request)

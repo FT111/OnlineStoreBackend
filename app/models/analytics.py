@@ -80,6 +80,25 @@ class Events:
 		def __repr__(self):
 			return f'ListingView({self.listingID}, {self.userID}, {self.id}, {self.time})'
 
+	class ListingImpression(Event):
+		"""
+		A model representing a listing impression
+		"""
+		listingID: str = Field(description='The ID of the listing that was viewed',
+								examples=['ff6344c7-42f2-4746-a234-80e69b3266ff'])
+		userID: Optional[str] = Field(description='The ID of the user that engaged with the listing',
+									   examples=['835b16c5-9440-4c44-9cc9-a9e70df9a882'])
+		id: str = Field(description='The ID of the impression event',
+						 examples=['69249b6b-8fe6-49f2-848a-0d4dc7b273ed'])
+		time: int = Field(description='The time at which the impression was registered, as a unix timestamp',
+						  examples=[1632931200])
+
+		def __str__(self):
+			return 'impression'
+
+		def __repr__(self):
+			return f'ListingImpression({self.listingID}, {self.userID}, {self.id}, {self.time})'
+
 
 class Confirmation(BaseModel):
 	"""

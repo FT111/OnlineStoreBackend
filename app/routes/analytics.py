@@ -30,8 +30,10 @@ def registerClick(listingID: str,
 	"""
 	data = DataRepository(database.db)
 
-	click: Events.ListingClick = data.registerListingClick(listingID,
-														   user['id'] if user else None)
+	click: Events.ListingClick = data.registerListingEvent(
+		Events.ListingClick,
+		listingID,
+		user['id'] if user else None)
 
 	return Response.ConfirmationResponse(meta={
 		'registered': True
@@ -57,8 +59,10 @@ def registerView(listingID: str,
 	"""
 	data = DataRepository(database.db)
 
-	view: Events.ListingView = data.registerListingView(listingID,
-														user['id'] if user else None)
+	view = data.registerListingEvent(
+		Events.ListingView,
+		listingID,
+		user['id'] if user else None)
 
 	return Response.ConfirmationResponse(meta={
 		'registered': True
@@ -67,4 +71,3 @@ def registerView(listingID: str,
 			'event': view
 		}
 	)
-
