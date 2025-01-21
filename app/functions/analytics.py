@@ -14,7 +14,7 @@ class Impressions:
 		Retrieves the impressions from the request
 		Links to given user ID if provided
 		"""
-		impressions = request.cookies.get('listing_impressions')
+		impressions = request.cookies.get('impressions')
 		if impressions is None:
 			return []
 
@@ -23,8 +23,8 @@ class Impressions:
 			id=str(uuid4()),
 			userID=user['id'] if user else None,
 			listingID=listingID,
-			time=int(time.time())
-
+			time=int(time.time()),
+			userIP=request.client.host
 		) for listingID in impressions]
 
 		return impressions

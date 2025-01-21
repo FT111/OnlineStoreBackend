@@ -440,7 +440,7 @@ class Queries:
             """
 
             conn.execute("""
-            INSERT INTO listingEvents (id, listingID, eventType, userID, addedAt)
+            INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID, userIP, addedAt)
             VALUES (?,?,?,?,?)
             """, (event.id, event.listingID, str(event), event.userID, event.time))
 
@@ -453,7 +453,7 @@ class Queries:
             # Convert events to a list of tuples ready for a SQL query
             eventTuples = [(event.id, event.listingID, str(event), event.userID, event.time) for event in events]
             conn.executemany("""
-            INSERT INTO listingEvents (id, listingID, eventType, userID, addedAt)
+            INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID, addedAt)
             VALUES (?,?,?,?,?)
             """, eventTuples)
 

@@ -364,9 +364,10 @@ class DataRepository:
 
 		return enrichedBasket
 
-	def registerListingEvent(self, eventType: Type[Events.Event], listingID, userID: Optional[str] = None) -> Type[Events.Event]:
+	def registerListingEvent(self, eventType: Type[Events.Event], listingID, userID: Optional[str] = None, userIP: str = 'localhost') -> Type[Events.Event]:
 		"""
 		Register a click on a listing
+		:param userIP: The IP address of the user that clicked the listing
 		:param eventType: The type of event to register
 		:param userID: The ID of the user that clicked the listing, if logged in
 		:param listingID:
@@ -378,7 +379,8 @@ class DataRepository:
 				id=str(uuid4()),
 				userID=userID,
 				listingID=listingID,
-				time=int(time.time())
+				time=int(time.time()),
+				userIP=userIP
 
 			)
 

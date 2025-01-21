@@ -33,7 +33,8 @@ def registerClick(listingID: str,
 	click: Events.ListingClick = data.registerListingEvent(
 		Events.ListingClick,
 		listingID,
-		user['id'] if user else None)
+		user['id'] if user else None,
+		request.client.host)
 
 	return Response.ConfirmationResponse(meta={
 		'registered': True
@@ -62,7 +63,9 @@ def registerView(listingID: str,
 	view = data.registerListingEvent(
 		Events.ListingView,
 		listingID,
-		user['id'] if user else None)
+		user['id'] if user else None,
+		request.client.host
+	)
 
 	return Response.ConfirmationResponse(meta={
 		'registered': True

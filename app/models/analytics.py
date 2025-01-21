@@ -21,6 +21,7 @@ class Events:
 						examples=['69249b6b-8fe6-49f2-848a-0d4dc7b273ed'])
 		time: int = Field(description='The time at which the event was registered, as a unix timestamp',
 						  examples=[1632931200])
+		userIP: str = Field(description='The IP address of the user that triggered the event')
 
 		@abstractmethod
 		def __str__(self):
@@ -54,6 +55,7 @@ class Events:
 		time: int = Field(description='The time at which the click was registered, as a unix timestamp',
 						  examples=[1632931200])
 
+		userIP: str = Field(description='The IP address of the user that triggered the event')
 		def __str__(self):
 			return 'click'
 
@@ -73,6 +75,7 @@ class Events:
 						 examples=['69249b6b-8fe6-49f2-848a-0d4dc7b273ed'])
 		time: int = Field(description='The time at which the view was registered, as a unix timestamp',
 						  examples=[1632931200])
+		userIP: str = Field(description='The IP address of the user that triggered the event')
 
 		def __str__(self):
 			return 'view'
@@ -92,6 +95,7 @@ class Events:
 						 examples=['69249b6b-8fe6-49f2-848a-0d4dc7b273ed'])
 		time: int = Field(description='The time at which the impression was registered, as a unix timestamp',
 						  examples=[1632931200])
+		userIP: str = Field(description='The IP address of the user that triggered the event')
 
 		def __str__(self):
 			return 'impression'
