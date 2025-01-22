@@ -173,6 +173,14 @@ class Queries:
             user = result[0]
             return user
 
+        @classmethod
+        def getUserStatistics(cls, conn, param):
+            """
+            Get user statistics
+            """
+            pass
+
+
     class Listings:
         @staticmethod
         def addListing(cursor, listing: Listing):
@@ -441,8 +449,8 @@ class Queries:
 
             conn.execute("""
             INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID, userIP, addedAt)
-            VALUES (?,?,?,?,?)
-            """, (event.id, event.listingID, str(event), event.userID, event.time))
+            VALUES (?,?,?,?,?,?)
+            """, (event.id, event.listingID, str(event), event.userID, event.userIP, event.time))
 
         @staticmethod
         def registerEvents(conn: DatabaseAdapter, events: List[Events.Event]):
@@ -451,10 +459,11 @@ class Queries:
             """
 
             # Convert events to a list of tuples ready for a SQL query
-            eventTuples = [(event.id, event.listingID, str(event), event.userID, event.time) for event in events]
+            eventTuples = [(event.id, event.listingID, str(event), event.userID, event.userIP, event.time)
+                           for event in events]
             conn.executemany("""
-            INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID, addedAt)
-            VALUES (?,?,?,?,?)
+            INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID,userIP, addedAt)
+            VALUES (?,?,?,?,?,?)
             """, eventTuples)
 
     class Categories:

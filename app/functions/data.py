@@ -407,5 +407,9 @@ class DataRepository:
 
 		return events
 
+	def getUserStatistics(self, user: User):
+
+		return Queries.Users.getUserStatistics(self.conn, user)
+
 
 
