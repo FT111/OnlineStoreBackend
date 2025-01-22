@@ -1,7 +1,10 @@
+import time
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.responses import StreamingResponse
 
 from ..database import database
 from ..functions.auth import userRequired, userOptional
@@ -110,3 +113,23 @@ async def getUserListings(
 		'total': len(listings),
 		'topCategories': sorted(dict(topListingCategories))
 	}, data=listings)
+
+
+@router.get('/{userID}/updates')
+def getUserStatistics(user=Depends(userRequired)) -> StreamingResponse:
+	"""
+	Get a user's statistics
+	:param user: The user to get statistics for
+	:return: A stream of the user's statistics
+	"""
+	data = DataRepository(database.db)
+	endDate = timedelta(weeks=4)
+	startDate = datetime.now() - endDate
+
+	def generateStatistics():
+		while True:
+			yield f'event: userStatsUpdate\ndata: {data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'), 
+																		  datetime.now().strftime('%Y-%m-%d'))}\n\n'
+			time.sleep(4)
+
+	return StreamingResponse(generateStatistics(), media_type='text/event-stream')

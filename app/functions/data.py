@@ -407,9 +407,20 @@ class DataRepository:
 
 		return events
 
-	def getUserStatistics(self, user: User):
+	def getUserStatistics(self, user: User, start: str, end: str) -> list:
+		"""
+		Get a user's statistics between two dates
+		:param user: User dict
+		:param start: ISO8601 date string. i.e '2025-00-25'
+		:param end: ISO8601 date string
+		:return:
+		"""
 
-		return Queries.Users.getUserStatistics(self.conn, user)
+		stats = [dict(row) for row in Queries.Users.getUserStatistics(self.conn, user['id'], start, end)]
+		clicks = [row['count'] for row in stats if row['eventType'] == 'click'][0]
+		impressions = [row['count'] for row in stats if row['eventType'] == 'impression'][0]
+		stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})
 
+		return stats
 
 

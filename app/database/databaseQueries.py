@@ -173,13 +173,20 @@ class Queries:
             user = result[0]
             return user
 
-        @classmethod
-        def getUserStatistics(cls, conn, param):
+        @staticmethod
+        def getUserStatistics(cursor: DatabaseAdapter, userID: str, start: str, end: str) -> list[sqlite3.Row]:
             """
-            Get user statistics
+            Get user statistics from listingEvents
             """
-            pass
+            result = cursor.execute("""
+            SELECT eventType, (count(id)) as count
+            FROM listingEventsByDay
+            WHERE ownerID = ?
+            AND date BETWEEN ? AND ?
+            GROUP BY eventType
+            """, (userID, start, end))
 
+            return result
 
     class Listings:
         @staticmethod
