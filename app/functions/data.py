@@ -417,9 +417,9 @@ class DataRepository:
 		"""
 
 		stats = [dict(row) for row in Queries.Users.getUserStatistics(self.conn, user['id'], start, end)]
-		clicks = [row['count'] for row in stats if row['eventType'] == 'click'][0]
-		impressions = [row['count'] for row in stats if row['eventType'] == 'impression'][0]
-		stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})
+		# clicks = [row['count'] for row in stats if row['eventType'] == 'click'][0]
+		# impressions = [row['count'] for row in stats if row['eventType'] == 'impression'][0]
+		# stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})
 
 		return stats
 

@@ -7,8 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.responses import StreamingResponse
 
 from ..database import database
-from ..functions.auth import userRequired, userOptional
+from ..functions.auth import userRequired, userOptional, generateToken
 from ..functions.data import DataRepository
+from ..models.auth import Response as AuthResponse, Token
 from ..models.listings import Response as ListingResponses
 from ..models.users import Response as UserResponse
 from ..models.users import UserSubmission
@@ -30,7 +31,7 @@ async def getMe(user: Dict = Depends(userRequired),
 	return UserResponse.User(meta={}, data=userDetails)
 
 
-@router.put('/', response_model=UserResponse.User)
+@router.put('/', response_model=AuthResponse.Token)
 async def newUser(
 		user: UserSubmission,
 		):
@@ -44,8 +45,9 @@ async def newUser(
 	data = DataRepository(database.db)
 
 	user = data.createUser(user)
+	token = generateToken(user.id, user.email)
 
-	return UserResponse.User(meta={}, data=user)
+	return AuthResponse.Token(meta={}, data=Token(token=token))
 
 
 @router.get('/{userID}', response_model=UserResponse.User)

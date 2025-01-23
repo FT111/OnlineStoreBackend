@@ -179,7 +179,8 @@ class Queries:
             Get user statistics from listingEvents
             """
             result = cursor.execute("""
-            SELECT eventType, (count(id)) as count
+            SELECT eventType,
+            json_group_array(json_object('date', date, 'count', count)) as events
             FROM listingEventsByDay
             WHERE ownerID = ?
             AND date BETWEEN ? AND ?
