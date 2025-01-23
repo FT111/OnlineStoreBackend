@@ -65,7 +65,6 @@ class ListingSearch(Search):
 	def __init__(self, dbSessionFunction):
 		self.tableName = 'listings'
 
-		self.lastTimestamp = 0
 		self.k1 = 1.5
 		self.b = 0.75
 
@@ -82,16 +81,16 @@ class ListingSearch(Search):
 		# Load the table
 		threading.Thread(target=self.loadTable, args=(dbSessionFunction,)).start()
 
-	def loadTable(self, session: SQLiteAdapter):
+	def loadTable(self, session: SQLiteAdapter, lastTimestamp: int = 0):
 		"""
 		Incrementally loads the table. This function is called every minute.
+		:param lastTimestamp: The last timestamp the table was loaded
 		:param session:  A database session
 		:return:
 		"""
 		# Incrementally loads BM25 data
-		newListings = Queries.Listings.getListingsSince(session, self.lastTimestamp)
+		newListings = Queries.Listings.getListingsSince(session, lastTimestamp)
 		# Update the last timestamp to the current time, for the next load
-		self.lastTimestamp = int(time.time())
 
 		if newListings:
 
@@ -116,9 +115,10 @@ class ListingSearch(Search):
 			self.documentCount += len(newListings)
 			self.averageDocumentLength = self.corpusLength / self.documentCount
 
-	# # Schedule the next load - Uncomment in prod
-	# time.sleep(60)
-	# self.loadTable(database.dbQueue)
+		# Sleep for 10 seconds before loading the table again to load new listings
+		lastTimestamp = int(time.time())
+		time.sleep(10)
+		self.loadTable(session, lastTimestamp)
 
 	def processDocument(self, description: str, id, title: str, category: str, subCategory: str):
 		"""
