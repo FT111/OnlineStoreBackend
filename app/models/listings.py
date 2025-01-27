@@ -182,6 +182,7 @@ class ListingSubmission(BaseModel):
     subCategory: str = Field(..., title="Product Subcategory", description="The subcategory of the product listing")
     category: str = Field(..., title="Product Category", description="The category of the product listing")
     public: bool = Field(False, title="Public", description="Whether the product listing is public")
+    condition: str = Field('New', title="Product Condition", description="The condition of the product listing")
 
     @field_validator("title")
     def validate_title(cls, value):
@@ -236,5 +237,11 @@ class Response:
     class SKU(ResponseSchema[ListingMeta, SKU]):
         """
         Response Model - Single SKU
+        """
+        pass
+
+    class Conditions(ResponseSchema[ListingMeta, List[str]]):
+        """
+        Response Model - Conditions
         """
         pass

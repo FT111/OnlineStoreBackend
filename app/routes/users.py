@@ -4,15 +4,18 @@ from datetime import datetime, timedelta
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
 from ..database import database
 from ..functions.auth import userRequired, userOptional, generateToken
 from ..functions.data import DataRepository
+from ..instances import emailService
 from ..models.auth import Response as AuthResponse, Token
+from ..models.emails import Templates as EmailTemplates
 from ..models.listings import Response as ListingResponses
 from ..models.users import Response as UserResponse
-from ..models.users import UserSubmission
+from ..models.users import UserSubmission, PwdResetRequest, PwdResetRequestSubmission
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -78,6 +81,35 @@ async def getUser(
 
 	# Return the user in standard format
 	return UserResponse.User(meta={}, data=user)
+
+
+@router.post('/reset')
+def requestPasswordReset(
+		resetRequest: PwdResetRequestSubmission,
+		request: Request
+		):
+	"""
+	Request a password reset email
+	:param resetRequest: The request for a password reset
+	:param request: The request object
+	:return:
+	"""
+
+	data = DataRepository(database.db)
+	try:
+		# Create a password reset request in the data store
+		reset: PwdResetRequest = data.createPasswordReset(resetRequest.email)
+		# Send an email to the user with the reset link
+		emailService.sendEmailTemplate(
+			EmailTemplates.PasswordResetEmail(),
+			recipientAddress=reset.user.emailAddress,
+			username=reset.user.username,
+			url=f"{request.url.scheme}://{request.url.hostname}:5173/login/reset/{reset.id}"
+		)
+	except ValueError as e:
+		return
+
+	return
 
 
 @router.get('/{userID}/listings', response_model=ListingResponses.Listings)

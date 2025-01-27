@@ -15,6 +15,13 @@ from ..models.users import User
 router = APIRouter(prefix="/listings", tags=["listings"])
 
 
+@router.get('/conditions')
+async def getConditions():
+    data = DataRepository(database.db)
+
+    return ListingResponses.Conditions(meta={}, data=data.getAllConditions())
+
+
 @router.api_route("/", methods=['GET', 'HEAD', 'OPTIONS'], response_model=ListingResponses.Listings)
 async def getListings(query: Optional[str] = None,
                       category: Optional[str] = None,
@@ -149,3 +156,5 @@ async def createSKU(sku: SKUSubmission,
 
     return ListingResponses.SKU(meta={"id": createdSKU.id},
                                 data=createdSKU)
+
+

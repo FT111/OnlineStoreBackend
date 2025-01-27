@@ -1,11 +1,10 @@
 import time
+import uuid
 from dataclasses import dataclass
-
-from pydantic import BaseModel, Field, EmailStr, model_validator, HttpUrl, field_validator
-from typing import List, Optional, Union, Dict, Any, Tuple, Set
-from typing_extensions import Annotated
+from typing import Optional, Union
 
 import regex as re
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 from app.models.response import ResponseSchema
 
@@ -48,7 +47,7 @@ class PrivilegedUser(UserDetail):
 
     firstName: str = Field(..., title="First Name", description="The first name of the user")
     surname: str = Field(..., title="Surname", description="The user's surname")
-    email: EmailStr = Field(..., title="Email", description="The email of the user")
+    emailAddress: EmailStr = Field(..., title="Email", description="The email of the user")
     streetAddress: Union[str, None] = Field(None, title="Street Address", description="The street address of the user")
     city: Union[str, None] = Field(None, title="City", description="The city of the user")
     province: Union[str, None] = Field(None, title="Region", description="The province of the user")
@@ -77,6 +76,24 @@ class PrivilegedUser(UserDetail):
         if not len(value) > 0:
             raise ValueError('Surname must not be empty')
         return value
+
+
+class PwdResetRequestSubmission(BaseModel):
+    """
+    Password Reset Request Submission Model
+    """
+    email: EmailStr = Field(..., title="Email", description="The email of the user")
+
+
+@dataclass
+class PwdResetRequest:
+    """
+    Password Reset Request Model
+    """
+    hashedId: str = Field(None, title="Hashed ID", description="The ID of the password reset request, hashed in the database")
+    id: str = Field(uuid.uuid4(), title="ID", description="The ID of the password reset request")
+    addedAt: int = Field(time.time(), title="Added At", description="The date the request was added")
+    user: PrivilegedUser = Field(..., title="User", description="The user requesting the password reset")
 
 
 class UserSubmission(PrivilegedUser):

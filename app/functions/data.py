@@ -17,7 +17,7 @@ from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU
 from app.models.transactions import Basket, EnrichedBasket
-from app.models.users import User, PrivilegedUser, UserDetail
+from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest
 
 
 class DataRepository:
@@ -433,5 +433,27 @@ class DataRepository:
 		conditions = [str(condition['title']) for condition in conditions]
 		return conditions
 
+	def createPasswordReset(self, emailAddress) -> PwdResetRequest:
+		"""
+		Create a password reset request
+		:param emailAddress: Email address of the user
+		:return:
+		"""
 
+		user = dict(Queries.Users.getUserByEmail(self.conn, emailAddress))
+		if not user:
+			raise ValueError('User not found')
+
+		requestId = str(uuid4())
+		hashedId = auth.hashPassword(requestId, requestId).decode('utf-8')
+		reset: PwdResetRequest = PwdResetRequest(
+			id=requestId,
+			hashedId=hashedId,
+			user=PrivilegedUser(**dict(user)),
+			addedAt=int(time.time())
+		)
+
+		Queries.Users.createPasswordReset(self.conn, reset)
+
+		return reset
 

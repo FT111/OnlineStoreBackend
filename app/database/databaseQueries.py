@@ -7,6 +7,7 @@ from typing_extensions import List, Union, Optional
 from app.database.database import SQLiteAdapter, DatabaseAdapter
 from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
+from app.models.users import PwdResetRequest
 
 listingBaseQuery = """
 SELECT
@@ -186,6 +187,19 @@ class Queries:
             AND date BETWEEN ? AND ?
             GROUP BY eventType
             """, (userID, start, end))
+
+            return result
+
+        @staticmethod
+        def createPasswordReset(conn, reset: PwdResetRequest):
+            """
+            Create a password reset request
+            """
+
+            result = conn.execute("""
+            INSERT INTO passwordResetRequests (id, userID, addedAt)
+            VALUES (?,?,?)
+            """, (reset.hashedId, reset.user.id, reset.addedAt))
 
             return result
 
@@ -385,8 +399,8 @@ class Queries:
 
         @staticmethod
         def getListingByID(cursor: SQLiteAdapter, listingID: str,
-						   includePrivileged: bool = False,
-						   requestUserID=None) -> Union[sqlite3.Row, None]:
+                           includePrivileged: bool = False,
+                           requestUserID=None) -> Union[sqlite3.Row, None]:
             """
             Get a listing by its ID, with associated SKUs
             """
@@ -447,6 +461,15 @@ class Queries:
             if not result:
                 return None
             return result[0]
+
+        @classmethod
+        def getAllConditions(cls, conn):
+            """
+            Get all conditions
+            """
+
+            result = conn.execute("SELECT title FROM conditions")
+            return result
 
     class Analytics:
         @staticmethod
