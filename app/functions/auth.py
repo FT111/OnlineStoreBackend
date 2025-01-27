@@ -99,7 +99,7 @@ def userOptional(request: Request) -> Union[dict, None]:
 
 
 def hashPassword(password, salt):
-    return bcrypt.hashpw(password.encode('utf-8'), salt.encode('utf-8'))
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
 
 def verifyListingOwnership(dataRepo, listingID, user) -> ListingWithSKUs:
