@@ -423,4 +423,15 @@ class DataRepository:
 
 		return stats
 
+	def getAllConditions(self):
+		"""
+		Get all wear conditions
+		:return:
+		"""
+
+		conditions = Queries.Listings.getAllConditions(self.conn)
+		conditions = [str(condition['title']) for condition in conditions]
+		return conditions
+
+
 
