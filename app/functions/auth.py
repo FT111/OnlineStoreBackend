@@ -1,5 +1,5 @@
 import time
-from sqlite3 import Connection
+from hashlib import sha256
 
 import bcrypt
 from fastapi import HTTPException
@@ -41,7 +41,7 @@ def validateToken(token: str) -> Union[dict, bool]:
         return False
 
 
-def authenticateUser(dbSession: Connection, email: str, password: str):
+def authenticateUser(conn, email: str, password: str):
     """
     Authenticates a user by email and password
     Fetches the user's hash and salt from the database
@@ -50,28 +50,28 @@ def authenticateUser(dbSession: Connection, email: str, password: str):
     time.sleep(1)
 
     # Gets the user's data
-    user = Queries.Users.getUserByEmail(dbSession, email)
+    user = Queries.Users.getUserByEmail(conn, email)
 
     # Fails if no user is found
     if not user:
         return False
 
-    hashedPassword = str(user['passwordHash'])
+    hashedPassword = user['passwordHash']
 
     # Validates given credentials. Uses bcrypt checkpw to avoid timing attacks
-    if bcrypt.checkpw(password.encode('utf-8'), hashedPassword.encode('utf-8')):
+    if bcrypt.checkpw(password.encode('utf-8'), hashedPassword):
         # Returns the user's data if the password is correct
         return user
     else:
         return False
 
 
-def generateSalt() -> str:
+def generateSalt():
     """
     Generates a salt for hashing passwords
     """
 
-    return bcrypt.gensalt().decode('utf-8')
+    return bcrypt.gensalt()
 
 
 def userRequired(request: Request) -> dict:
@@ -99,7 +99,11 @@ def userOptional(request: Request) -> Union[dict, None]:
 
 
 def hashPassword(password, salt):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    return bcrypt.hashpw(password.encode('utf-8'), salt)
+
+
+def hashValue(value: str) -> str:
+    return sha256(value.encode('utf-8')).hexdigest()
 
 
 def verifyListingOwnership(dataRepo, listingID, user) -> ListingWithSKUs:

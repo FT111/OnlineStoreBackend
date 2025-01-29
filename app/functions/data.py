@@ -17,7 +17,7 @@ from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU
 from app.models.transactions import Basket, EnrichedBasket
-from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest
+from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
 
 class DataRepository:
@@ -141,8 +141,8 @@ class DataRepository:
 		dbUser['id'] = str(uuid4())
 
 		# Hash the password and store the salt
-		salt = bcrypt.gensalt().decode('utf-8')
-		dbUser['passwordSalt'] = salt
+		salt = bcrypt.gensalt()
+		dbUser['passwordSalt'] = salt.decode('utf-8')
 		passwordHash = auth.hashPassword(dbUser['password'], salt)
 
 		# Remove the plaintext password and store the hash
@@ -440,12 +440,12 @@ class DataRepository:
 		:return:
 		"""
 
-		user = dict(Queries.Users.getUserByEmail(self.conn, emailAddress))
+		user = Queries.Users.getUserByEmail(self.conn, emailAddress)
 		if not user:
 			raise ValueError('User not found')
 
 		requestId = str(uuid4())
-		hashedId = auth.hashPassword(requestId, requestId).decode('utf-8')
+		hashedId = auth.hashValue(requestId)
 		reset: PwdResetRequest = PwdResetRequest(
 			id=requestId,
 			hashedId=hashedId,
@@ -457,3 +457,33 @@ class DataRepository:
 
 		return reset
 
+	def resetPassword(self, reset: PwdResetSubmission):
+		"""
+		Reset a user's password
+		:param reset: Password reset submission object
+		:return:
+		"""
+
+		hashedId = auth.hashValue(reset.token)
+
+		# Check if the reset request exists
+		existingResetRequest = Queries.Users.getPasswordReset(self.conn, hashedId)
+		if not existingResetRequest:
+			raise HTTPException(status_code=404, detail="Reset request not found")
+		existingResetRequest = existingResetRequest[0]
+
+		if existingResetRequest['addedAt'] < time.time() - 1800:
+			raise HTTPException(status_code=400, detail="Reset request expired")
+
+		user = Queries.Users.getUserByID(self.conn, existingResetRequest['userID'])
+		if not user:
+			raise HTTPException(status_code=404, detail="User not found")
+
+		# Hash the password and store the salt
+		passwordHash = auth.hashPassword(reset.password, auth.generateSalt())
+
+		# Update the user's password
+		Queries.Users.updatePassword(self.conn, user['id'], passwordHash)
+
+		# Delete the reset request
+		Queries.Users.deletePasswordReset(self.conn, hashedId)

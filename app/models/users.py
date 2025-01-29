@@ -85,6 +85,15 @@ class PwdResetRequestSubmission(BaseModel):
     email: EmailStr = Field(..., title="Email", description="The email of the user")
 
 
+class PwdResetSubmission(BaseModel):
+    """
+    Password Reset Submission Model
+    """
+    password: str = Field(..., title="Password", description="The new password, as plaintext")
+    token: str = Field(..., title="Token", description="The token for the password reset request")
+
+
+
 @dataclass
 class PwdResetRequest:
     """

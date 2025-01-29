@@ -122,7 +122,7 @@ class Queries:
             """
 
             result = cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
-            user = result[0]
+            user = result[0] if result else None
             return user
 
         @staticmethod
@@ -145,7 +145,7 @@ class Queries:
                 WHERE id = ?"""
 
             result = cursor.execute(query, (userID,))
-            user = result[0]
+            user = result[0] if result else None
 
             return user
 
@@ -171,7 +171,7 @@ class Queries:
             """
 
             result = cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
-            user = result[0]
+            user = result[0] if result else None
             return user
 
         @staticmethod
@@ -200,6 +200,47 @@ class Queries:
             INSERT INTO passwordResetRequests (id, userID, addedAt)
             VALUES (?,?,?)
             """, (reset.hashedId, reset.user.id, reset.addedAt))
+
+            return result
+
+        @classmethod
+        def getPasswordReset(cls, conn, hashedId):
+            """
+            Get a password reset request by its hashed ID
+            """
+
+            result = conn.execute("""
+            SELECT id, userID, addedAt
+            FROM passwordResetRequests
+            WHERE id = ?
+            """, (hashedId,))
+
+            return result
+
+        @staticmethod
+        def updatePassword(conn, userID, passwordHash):
+            """
+            Update a user's password
+            """
+
+            result = conn.execute("""
+            UPDATE users
+            SET passwordHash = ?
+            WHERE id = ?
+            """, (passwordHash, userID))
+
+            return result
+
+        @staticmethod
+        def deletePasswordReset(conn, hashedId):
+            """
+            Delete a password reset request
+            """
+
+            result = conn.execute("""
+            DELETE FROM passwordResetRequests
+            WHERE id = ?
+            """, (hashedId,))
 
             return result
 
@@ -565,7 +606,7 @@ class Queries:
             JOIN subCategories sCa ON sCa.categoryID = Ca.id
             WHERE sCa.title = ?
             """, (subcategory,))
-            category = result[0]
+            category = result[0] if result else None
             return category
 
 
