@@ -23,7 +23,7 @@ async def enrichBasket(
 	enrichedBasket = data.enrichBasket(basket)
 
 	return Response.EnrichedBasketResponse(meta={
-		'total': len(enrichedBasket.items),
+		'total': sum([item['quantity'] for item in enrichedBasket.items.values()]),
 		'value': sum([item['quantity'] * item['sku'].price for item in enrichedBasket.items.values()])
 	},
 		data=enrichedBasket
