@@ -134,6 +134,7 @@ class Queries:
 			query = """
                 SELECT id, username, emailAddress, firstName, surname, 
                 profilePictureURL, bannerURL, description, joinedAt,
+                addressLine1, addressLine2, city, country, postcode,
                     (
                         SELECT json_group_array(
                                Li.id

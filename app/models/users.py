@@ -50,9 +50,12 @@ class PrivilegedUser(UserDetail):
 	surname: str = Field(..., title="Surname", description="The user's surname")
 	emailAddress: EmailStr = Field(..., title="Email", description="The email of the user")
 	streetAddress: Union[str, None] = Field(None, title="Street Address", description="The street address of the user")
+	addressLine1: Union[str, None] = Field(None, title="Address Line 1", description="The first line of the address")
+	addressLine2: Union[str, None] = Field(None, title="Address Line 2",
+										   description="The second line of the address, optional")
 	city: Union[str, None] = Field(None, title="City", description="The city of the user")
-	province: Union[str, None] = Field(None, title="Region", description="The province of the user")
 	country: Union[str, None] = Field(None, title="Country", description="The country of the user")
+	postcode: Union[str, None] = Field(None, title="Postcode", description="The postcode of the user")
 
 	@classmethod
 	@field_validator("email")
