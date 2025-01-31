@@ -9,7 +9,8 @@ from app.models.analytics import Events
 
 class Impressions:
 	@staticmethod
-	def retrieveImpressionsFromRequest(request: Request, user: Optional[dict]) -> List[Optional[Events.ListingImpression]]:
+	def retrieveImpressionsFromRequest(request: Request, user: Optional[dict]) -> List[
+		Optional[Events.ListingImpression]]:
 		"""
 		Retrieves the impressions from the request
 		Links to given user ID if provided

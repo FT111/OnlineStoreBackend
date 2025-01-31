@@ -35,8 +35,3 @@ class Templates:
 
 		def getPlainText(self):
 			return "Welcome to eBuy!\n\nThank you for joining our platform!"
-
-
-
-
-

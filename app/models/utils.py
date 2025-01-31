@@ -1,6 +1,3 @@
-from functools import wraps
-
-
 def allowPatches(cls, value):
 	"""
 	Allow patches for the field

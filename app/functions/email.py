@@ -10,6 +10,7 @@ class EmailService:
 	"""
 	A class to send emails
 	"""
+
 	def __init__(self, senderAddress: str, senderPassword: str, senderHost: str, senderPort: int):
 		self.senderHost = senderHost
 		self.senderPort = senderPort
@@ -58,5 +59,3 @@ class EmailService:
 					   template.getSubject(**templateKwargs),
 					   template.getBody(**templateKwargs),
 					   template.getPlainText(**templateKwargs))
-
-

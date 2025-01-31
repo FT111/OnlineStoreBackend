@@ -21,4 +21,3 @@ emailService = EmailService(senderAddress=os.getenv('EMAIL_ADDRESS'),
 							senderPassword=os.getenv('EMAIL_PASSWORD'),
 							senderHost=os.getenv('EMAIL_HOST'),
 							senderPort=int(os.getenv('EMAIL_PORT')))
-

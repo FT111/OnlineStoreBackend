@@ -203,8 +203,9 @@ class ListingSearch(Search):
 
 		if sort == 'price':
 			sortedListings = quickSort(listings,
-									key=lambda listing: listing['basePrice'] if listing['basePrice'] is not None else 0,
-									reverse=reverse)
+									   key=lambda listing: listing['basePrice'] if listing[
+																					   'basePrice'] is not None else 0,
+									   reverse=reverse)
 		elif sort == 'rating':
 			sortedListings = quickSort(listings, key=lambda listing: listing['rating'], reverse=reverse)
 		elif sort == 'views':
@@ -212,8 +213,9 @@ class ListingSearch(Search):
 		elif sort == 'trending':
 			currentTime = int(time.time())
 			sortedListings = quickSort(listings, key=lambda listing: (
-																		  currentTime - listing['addedAt']) / listing['views'] if listing['views'] > 0 else 1,
-									reverse=reverse)
+																			 currentTime - listing['addedAt']) /
+																	 listing['views'] if listing['views'] > 0 else 1,
+									   reverse=reverse)
 		else:
 			sortedListings = listings
 

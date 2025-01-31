@@ -111,26 +111,27 @@ GROUP BY Li.id, Ca.title, sCa.title, Us.id
 
 
 class Queries:
-    """
-    This class is responsible for executing SQL queries on the database.
-    """
-    class Users:
-        @staticmethod
-        def getUserByEmail(cursor: DatabaseAdapter, email: str) -> sqlite3.Row:
-            """
-            Get a user by their email
-            """
+	"""
+	This class is responsible for executing SQL queries on the database.
+	"""
 
-            result = cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
-            user = result[0] if result else None
-            return user
+	class Users:
+		@staticmethod
+		def getUserByEmail(cursor: DatabaseAdapter, email: str) -> sqlite3.Row:
+			"""
+			Get a user by their email
+			"""
 
-        @staticmethod
-        def getUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
-            """
-            Get a user by their ID
-            """
-            query = """
+			result = cursor.execute("SELECT * FROM users WHERE emailAddress = ?", (email,))
+			user = result[0] if result else None
+			return user
+
+		@staticmethod
+		def getUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
+			"""
+			Get a user by their ID
+			"""
+			query = """
                 SELECT id, username, emailAddress, firstName, surname, 
                 profilePictureURL, bannerURL, description, joinedAt,
                     (
@@ -144,42 +145,42 @@ class Queries:
                 FROM users Us
                 WHERE id = ?"""
 
-            result = cursor.execute(query, (userID,))
-            user = result[0] if result else None
+			result = cursor.execute(query, (userID,))
+			user = result[0] if result else None
 
-            return user
+			return user
 
-        @staticmethod
-        def addUser(cursor: DatabaseAdapter, user: dict):
-            """
-            Adds a user to the database
-            :param cursor:
-            :param user:
-            :return:
-            """
+		@staticmethod
+		def addUser(cursor: DatabaseAdapter, user: dict):
+			"""
+			Adds a user to the database
+			:param cursor:
+			:param user:
+			:return:
+			"""
 
-            cursor.execute("""
+			cursor.execute("""
             INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
             VALUES (?,?,?,?,?,?,?,?)
             """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
-                           user['passwordSalt'], user['joinedAt'],))
+				  user['passwordSalt'], user['joinedAt'],))
 
-        @staticmethod
-        def getPrivilegedUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
-            """
-            Get a privileged user by their ID
-            """
+		@staticmethod
+		def getPrivilegedUserByID(cursor: DatabaseAdapter, userID: str) -> sqlite3.Row:
+			"""
+			Get a privileged user by their ID
+			"""
 
-            result = cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
-            user = result[0] if result else None
-            return user
+			result = cursor.execute("SELECT * FROM users WHERE id = ?", (userID,))
+			user = result[0] if result else None
+			return user
 
-        @staticmethod
-        def getUserStatistics(cursor: DatabaseAdapter, userID: str, start: str, end: str) -> list[sqlite3.Row]:
-            """
-            Get user statistics from listingEvents
-            """
-            result = cursor.execute("""
+		@staticmethod
+		def getUserStatistics(cursor: DatabaseAdapter, userID: str, start: str, end: str) -> list[sqlite3.Row]:
+			"""
+			Get user statistics from listingEvents
+			"""
+			result = cursor.execute("""
             SELECT eventType,
             json_group_array(json_object('date', date, 'count', count)) as events
             FROM listingEventsByDay
@@ -188,223 +189,224 @@ class Queries:
             GROUP BY eventType
             """, (userID, start, end))
 
-            return result
+			return result
 
-        @staticmethod
-        def createPasswordReset(conn, reset: PwdResetRequest):
-            """
-            Create a password reset request
-            """
+		@staticmethod
+		def createPasswordReset(conn, reset: PwdResetRequest):
+			"""
+			Create a password reset request
+			"""
 
-            result = conn.execute("""
+			result = conn.execute("""
             INSERT INTO passwordResetRequests (id, userID, addedAt)
             VALUES (?,?,?)
             """, (reset.hashedId, reset.user.id, reset.addedAt))
 
-            return result
+			return result
 
-        @classmethod
-        def getPasswordReset(cls, conn, hashedId):
-            """
-            Get a password reset request by its hashed ID
-            """
+		@classmethod
+		def getPasswordReset(cls, conn, hashedId):
+			"""
+			Get a password reset request by its hashed ID
+			"""
 
-            result = conn.execute("""
+			result = conn.execute("""
             SELECT id, userID, addedAt
             FROM passwordResetRequests
             WHERE id = ?
             """, (hashedId,))
 
-            return result
+			return result
 
-        @staticmethod
-        def updatePassword(conn, userID, passwordHash):
-            """
-            Update a user's password
-            """
+		@staticmethod
+		def updatePassword(conn, userID, passwordHash):
+			"""
+			Update a user's password
+			"""
 
-            result = conn.execute("""
+			result = conn.execute("""
             UPDATE users
             SET passwordHash = ?
             WHERE id = ?
             """, (passwordHash, userID))
 
-            return result
+			return result
 
-        @staticmethod
-        def deletePasswordReset(conn, hashedId):
-            """
-            Delete a password reset request
-            """
+		@staticmethod
+		def deletePasswordReset(conn, hashedId):
+			"""
+			Delete a password reset request
+			"""
 
-            result = conn.execute("""
+			result = conn.execute("""
             DELETE FROM passwordResetRequests
             WHERE id = ?
             """, (hashedId,))
 
-            return result
+			return result
 
-    class Listings:
-        @staticmethod
-        def addListing(cursor, listing: Listing):
-            """
-            Add a listing to the database
+	class Listings:
+		@staticmethod
+		def addListing(cursor, listing: Listing):
+			"""
+			Add a listing to the database
 
-            :param cursor:
-            :param listing:
-            :return:
-            """
+			:param cursor:
+			:param listing:
+			:return:
+			"""
 
-            result = cursor.execute("""
+			result = cursor.execute("""
             INSERT INTO listings (id, title, description, ownerID, public, addedAt, views, rating, subCategoryID)
             VALUES (?,?,?,?,?,?,?,?,(SELECT id FROM subCategories Su WHERE Su.title==?))
             """, (listing.id, listing.title, listing.description, listing.ownerUser.id, listing.public,
-                  listing.addedAt, 0, 0, listing.subCategory,))
+				  listing.addedAt, 0, 0, listing.subCategory,))
 
-        @staticmethod
-        def updateListing(cursor: DatabaseAdapter, listing: ListingWithSKUs):
-            """
-            Update a listing in the database
-            """
+		@staticmethod
+		def updateListing(cursor: DatabaseAdapter, listing: ListingWithSKUs):
+			"""
+			Update a listing in the database
+			"""
 
-            cursor.execute("""
+			cursor.execute("""
             UPDATE listings
             SET title = ?, description = ?, public = ?, 
             subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
             WHERE id = ?
             """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
 
-            if listing.skuOptions:
-                existingSKUTypes = cursor.execute("SELECT title FROM skuTypes WHERE listingID = ?", (listing.id,))
-                existingSKUValues = cursor.execute("SELECT skV.title, skT.title as typeTitle FROM skuValues skV"
-                                                   " JOIN skuTypes skT ON skT.id = skuTypeID"
-                                                   " WHERE skT.listingID = ?", (listing.id,))
+			if listing.skuOptions:
+				existingSKUTypes = cursor.execute("SELECT title FROM skuTypes WHERE listingID = ?", (listing.id,))
+				existingSKUValues = cursor.execute("SELECT skV.title, skT.title as typeTitle FROM skuValues skV"
+												   " JOIN skuTypes skT ON skT.id = skuTypeID"
+												   " WHERE skT.listingID = ?", (listing.id,))
 
-                # Remove existing options if not being defined
-                listingSkuOptionKeys = listing.skuOptions.keys()
-                listingSkuOptionValues = listing.skuOptions.values()
-                skuTypesToRemove = [skuType['title'] for skuType in existingSKUTypes
-                                    if skuType['title'] not in listing.skuOptions.keys()]
+				# Remove existing options if not being defined
+				listingSkuOptionKeys = listing.skuOptions.keys()
+				listingSkuOptionValues = listing.skuOptions.values()
+				skuTypesToRemove = [skuType['title'] for skuType in existingSKUTypes
+									if skuType['title'] not in listing.skuOptions.keys()]
 
-                # Remove existing values if not being redefined.
-                # Compares existing values with new values
-                newSKUOptions = defaultdict(list, listing.skuOptions)
-                skuValuesToRemove = [skuValue['title'] for skuValue in existingSKUValues
-                                     if skuValue['title'] not in newSKUOptions[skuValue['typeTitle']]]
+				# Remove existing values if not being redefined.
+				# Compares existing values with new values
+				newSKUOptions = defaultdict(list, listing.skuOptions)
+				skuValuesToRemove = [skuValue['title'] for skuValue in existingSKUValues
+									 if skuValue['title'] not in newSKUOptions[skuValue['typeTitle']]]
 
-                if skuTypesToRemove:
-                    skuTypesToRemove.append(listing.id)
-                    # Delete existing options if not being defined
-                    cursor.execute(f"""
-                    DELETE FROM skuTypes WHERE title in ({','.join('?' * (len(skuTypesToRemove)-1))})
+				if skuTypesToRemove:
+					skuTypesToRemove.append(listing.id)
+					# Delete existing options if not being defined
+					cursor.execute(f"""
+                    DELETE FROM skuTypes WHERE title in ({','.join('?' * (len(skuTypesToRemove) - 1))})
                     AND listingID = ?
                     """, tuple(skuTypesToRemove))
 
-                if skuValuesToRemove:
-                    # Delete existing values if not being defined
-                    cursor.execute(f"""
+				if skuValuesToRemove:
+					# Delete existing values if not being defined
+					cursor.execute(f"""
                     DELETE FROM skuValues WHERE title in ({','.join('?' * len(skuValuesToRemove))})
                     """, tuple(skuValuesToRemove))
 
-                # Add new option types if not already existing
-                addedSKUTypes = [(skuType, listing.id) for skuType in listing.skuOptions.keys() if skuType not in map(lambda x: x['title'], existingSKUTypes)]
+				# Add new option types if not already existing
+				addedSKUTypes = [(skuType, listing.id) for skuType in listing.skuOptions.keys() if
+								 skuType not in map(lambda x: x['title'], existingSKUTypes)]
 
-                if addedSKUTypes:
-                    cursor.executemany("""
+				if addedSKUTypes:
+					cursor.executemany("""
                     INSERT INTO skuTypes (title, listingID)
                     VALUES (?, ?)
                     """, addedSKUTypes)
 
-                # Add new option values if not already existing
-                # Transform skuValues to (title, skuTypeTitle, listingID)
-                addedSKUValues = [(value, skuType, listing.id) for skuType, values in listing.skuOptions.items()
-                                  for value in values if value not in map(lambda x: x['title'], existingSKUValues)]
+				# Add new option values if not already existing
+				# Transform skuValues to (title, skuTypeTitle, listingID)
+				addedSKUValues = [(value, skuType, listing.id) for skuType, values in listing.skuOptions.items()
+								  for value in values if value not in map(lambda x: x['title'], existingSKUValues)]
 
-                if addedSKUValues:
-                    cursor.executemany("""
+				if addedSKUValues:
+					cursor.executemany("""
                     INSERT INTO skuValues (title, skuTypeID)
                     VALUES (?, (SELECT id FROM skuTypes WHERE title = ? AND listingID = ?))
                     """, addedSKUValues)
 
-                # # Find SKUs with invalid options
-                # cursor.execute("""
-                # DELETE FROM skuOptions
-                # WHERE valueID NOT IN (SELECT id FROM skuValues)
-                # AND skuID IN (SELECT id FROM skus WHERE listingID = ?)
-                # """, (listing.id,))
+				# # Find SKUs with invalid options
+				# cursor.execute("""
+				# DELETE FROM skuOptions
+				# WHERE valueID NOT IN (SELECT id FROM skuValues)
+				# AND skuID IN (SELECT id FROM skus WHERE listingID = ?)
+				# """, (listing.id,))
 
-        @staticmethod
-        def updateSKU(cursor: DatabaseAdapter, sku: SKUWithStock):
-            """
-            Update a SKU in the database
-            """
+		@staticmethod
+		def updateSKU(cursor: DatabaseAdapter, sku: SKUWithStock):
+			"""
+			Update a SKU in the database
+			"""
 
-            result = cursor.execute("""
+			result = cursor.execute("""
             UPDATE skus
             SET title = ?, price = ?, discount = ?, stock = ?
             WHERE id = ?
         
             """, (sku.title, sku.price, sku.discount, sku.stock, sku.id))
 
-            for image in sku.images:
-                cursor.execute("""
+			for image in sku.images:
+				cursor.execute("""
                 INSERT OR REPLACE INTO skuImages (id, skuID)
                 VALUES (?, ?)
                 """, (image, sku.id))
 
-            # Remove all options
-            result = cursor.execute("DELETE FROM skuOptions WHERE skuID = ?", (sku.id,))
-            # Add new options
-            if sku.options:
-                options = [(sku.id, value) for value in sku.options.values()]
-                for optionTuple in options:
-                    cursor.execute("""
+			# Remove all options
+			result = cursor.execute("DELETE FROM skuOptions WHERE skuID = ?", (sku.id,))
+			# Add new options
+			if sku.options:
+				options = [(sku.id, value) for value in sku.options.values()]
+				for optionTuple in options:
+					cursor.execute("""
                     INSERT OR REPLACE INTO skuOptions (skuID, valueID)
                     VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
                     """, (optionTuple[0], optionTuple[1],))
 
-        @staticmethod
-        def addSKU(cursor: DatabaseAdapter, sku: SKUWithStock, listingID: str):
-            """
-            Add a SKU to the database
-            """
+		@staticmethod
+		def addSKU(cursor: DatabaseAdapter, sku: SKUWithStock, listingID: str):
+			"""
+			Add a SKU to the database
+			"""
 
-            result = cursor.execute("""
+			result = cursor.execute("""
             INSERT INTO skus (id, listingID, title, price, discount, stock)
             VALUES (?,?,?,?,?,?)
             """, (sku.id, listingID, sku.title, sku.price, sku.discount, sku.stock))
 
-            for image in sku.images:
-                cursor.execute("""
+			for image in sku.images:
+				cursor.execute("""
                 INSERT INTO skuImages (id, skuID)
                 VALUES (?, ?)
                 """, (image, sku.id))
 
-            if sku.options:
-                options = [(sku.id, value) for value in sku.options.values()]
-                cursor.executemany("""
+			if sku.options:
+				options = [(sku.id, value) for value in sku.options.values()]
+				cursor.executemany("""
                 INSERT INTO skuOptions (skuID, valueID)
                 VALUES (?, (SELECT id FROM skuValues WHERE title = ?))
                 """, options)
 
-        @staticmethod
-        def getListingIDsByUsername(cursor: DatabaseAdapter, username: str) -> List[int]:
-            """
-            Get a list of listing IDs by a username
-            """
+		@staticmethod
+		def getListingIDsByUsername(cursor: DatabaseAdapter, username: str) -> List[int]:
+			"""
+			Get a list of listing IDs by a username
+			"""
 
-            result = cursor.execute("SELECT id FROM listings WHERE ownerID ="
-                           " (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
-            listings = result
-            return listings
+			result = cursor.execute("SELECT id FROM listings WHERE ownerID ="
+									" (SELECT Us.id FROM Users Us WHERE Us.username == ?)", (username,))
+			listings = result
+			return listings
 
-        @staticmethod
-        def getListingsSince(cursor: DatabaseAdapter, timestamp: int) -> List[sqlite3.Row]:
-            """
-            Returns all rows since the timestamp.
-            """
+		@staticmethod
+		def getListingsSince(cursor: DatabaseAdapter, timestamp: int) -> List[sqlite3.Row]:
+			"""
+			Returns all rows since the timestamp.
+			"""
 
-            result = cursor.execute(f"""SELECT Li.id, Li.title, Li.description,
+			result = cursor.execute(f"""SELECT Li.id, Li.title, Li.description,
                      (
                         SELECT sCa.title 
                          FROM subCategories sCa
@@ -421,134 +423,134 @@ class Queries:
                     ) AS category
                  FROM listings Li
                  WHERE addedAt > ?""",
-                           (timestamp,))
+									(timestamp,))
 
-            return result
+			return result
 
-        @staticmethod
-        def getListingsByIDs(cursor: DatabaseAdapter, listingIDs: list) -> list:
-            """
-            Get a listing by its ID
-            """
-            query = listingBaseQuery.format("""
+		@staticmethod
+		def getListingsByIDs(cursor: DatabaseAdapter, listingIDs: list) -> list:
+			"""
+			Get a listing by its ID
+			"""
+			query = listingBaseQuery.format("""
             WHERE Li.id IN ({}) AND
             Li.public = 1
             """.format(','.join('?' * len(listingIDs))))
 
-            result = cursor.execute(query, listingIDs)
-            return result
+			result = cursor.execute(query, listingIDs)
+			return result
 
-        @staticmethod
-        def getListingByID(cursor: SQLiteAdapter, listingID: str,
-                           includePrivileged: bool = False,
-                           requestUserID=None) -> Union[sqlite3.Row, None]:
-            """
-            Get a listing by its ID, with associated SKUs
-            """
-            query = listingBaseQuery.format(f"""
+		@staticmethod
+		def getListingByID(cursor: SQLiteAdapter, listingID: str,
+						   includePrivileged: bool = False,
+						   requestUserID=None) -> Union[sqlite3.Row, None]:
+			"""
+			Get a listing by its ID, with associated SKUs
+			"""
+			query = listingBaseQuery.format(f"""
             WHERE Li.id = ?
             AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
             """)
 
-            # Allow listing owners to view their own private listings
-            if includePrivileged:
-                result = cursor.execute(query, (listingID, requestUserID))
-            else:
-                result = cursor.execute(query, (listingID,))
+			# Allow listing owners to view their own private listings
+			if includePrivileged:
+				result = cursor.execute(query, (listingID, requestUserID))
+			else:
+				result = cursor.execute(query, (listingID,))
 
-            if not result:
-                return None
-            return result[0]
+			if not result:
+				return None
+			return result[0]
 
-        @staticmethod
-        def getListingsByUserID(cursor, userID,
-                                includePrivileged=False):
+		@staticmethod
+		def getListingsByUserID(cursor, userID,
+								includePrivileged=False):
 
-            query = listingBaseQuery.format(f"""
+			query = listingBaseQuery.format(f"""
             WHERE Li.ownerID = ?
             """ + ("" if includePrivileged else "AND Li.public = 1"))
 
-            result = cursor.execute(query, (userID,))
-            listing = result
-            return listing
+			result = cursor.execute(query, (userID,))
+			listing = result
+			return listing
 
-        @staticmethod
-        def getListingsBySKUids(cursor: DatabaseAdapter, skuIDs: list) -> List[sqlite3.Row]:
-            """
-            Get a list of listings by their SKU IDs
-            """
+		@staticmethod
+		def getListingsBySKUids(cursor: DatabaseAdapter, skuIDs: list) -> List[sqlite3.Row]:
+			"""
+			Get a list of listings by their SKU IDs
+			"""
 
-            query = listingBaseQuery.format("""
+			query = listingBaseQuery.format("""
             WHERE Sk.id IN ({})
             """.format(','.join('?' * len(skuIDs))))
 
-            result = cursor.execute(query, tuple(skuIDs,))
-            return result
+			result = cursor.execute(query, tuple(skuIDs, ))
+			return result
 
-        @staticmethod
-        def getSKUByOptions(cursor: DatabaseAdapter, options: dict, listingID: str) -> Optional[sqlite3.Row]:
-            """
-            Get a SKU by its options
-            """
+		@staticmethod
+		def getSKUByOptions(cursor: DatabaseAdapter, options: dict, listingID: str) -> Optional[sqlite3.Row]:
+			"""
+			Get a SKU by its options
+			"""
 
-            jsonOptions = json.dumps(options)
-            query = """
+			jsonOptions = json.dumps(options)
+			query = """
             SELECT Sk.id
             FROM skuOptionsView Sk
             WHERE Sk.listingID = ?
             AND Sk.options = json(?)   
             """
-            result = cursor.execute(query, (listingID, jsonOptions, ))
-            if not result:
-                return None
-            return result[0]
+			result = cursor.execute(query, (listingID, jsonOptions,))
+			if not result:
+				return None
+			return result[0]
 
-        @classmethod
-        def getAllConditions(cls, conn):
-            """
-            Get all conditions
-            """
+		@classmethod
+		def getAllConditions(cls, conn):
+			"""
+			Get all conditions
+			"""
 
-            result = conn.execute("SELECT title FROM conditions")
-            return result
+			result = conn.execute("SELECT title FROM conditions")
+			return result
 
-    class Analytics:
-        @staticmethod
-        def registerEvent(conn: DatabaseAdapter, event: Events.Event):
-            """
-            Add a click event to a listing
-            """
+	class Analytics:
+		@staticmethod
+		def registerEvent(conn: DatabaseAdapter, event: Events.Event):
+			"""
+			Add a click event to a listing
+			"""
 
-            conn.execute("""
+			conn.execute("""
             INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID, userIP, addedAt)
             VALUES (?,?,?,?,?,?)
             """, (event.id, event.listingID, str(event), event.userID, event.userIP, event.time))
 
-        @staticmethod
-        def registerEvents(conn: DatabaseAdapter, events: List[Events.Event]):
-            """
-            Add multiple events to the database
-            """
+		@staticmethod
+		def registerEvents(conn: DatabaseAdapter, events: List[Events.Event]):
+			"""
+			Add multiple events to the database
+			"""
 
-            # Convert events to a list of tuples ready for a SQL query
-            eventTuples = [(event.id, event.listingID, str(event), event.userID, event.userIP, event.time)
-                           for event in events]
-            conn.executemany("""
+			# Convert events to a list of tuples ready for a SQL query
+			eventTuples = [(event.id, event.listingID, str(event), event.userID, event.userIP, event.time)
+						   for event in events]
+			conn.executemany("""
             INSERT OR IGNORE INTO listingEvents (id, listingID, eventType, userID,userIP, addedAt)
             VALUES (?,?,?,?,?,?)
             """, eventTuples)
 
-    class Categories:
-        @staticmethod
-        def getCategory(cursor: DatabaseAdapter, title) -> sqlite3.Row:
-            """
-            Returns a single category specified by a title
-            :param cursor:
-            :param title:
-            :return:
-            """
+	class Categories:
+		@staticmethod
+		def getCategory(cursor: DatabaseAdapter, title) -> sqlite3.Row:
+			"""
+			Returns a single category specified by a title
+			:param cursor:
+			:param title:
+			:return:
+			"""
 
-            result = cursor.execute(f"""SELECT id, title, description, colour,
+			result = cursor.execute(f"""SELECT id, title, description, colour,
                                 (
                                 SELECT json_group_array(
                                     json_object(
@@ -562,15 +564,15 @@ class Queries:
                      FROM categories
                      WHERE title = ?""", (title,))
 
-            return result[0] if result else None
+			return result[0] if result else None
 
-        @staticmethod
-        def getAllCategories(cursor: DatabaseAdapter) -> List[sqlite3.Row]:
-            """
-            Returns all categories.
-            """
+		@staticmethod
+		def getAllCategories(cursor: DatabaseAdapter) -> List[sqlite3.Row]:
+			"""
+			Returns all categories.
+			"""
 
-            result = cursor.execute(f"""SELECT id, title, description, colour,
+			result = cursor.execute(f"""SELECT id, title, description, colour,
                                 (
                                 SELECT json_group_array(
                                     json_object(
@@ -583,15 +585,15 @@ class Queries:
                                 
                      FROM categories""")
 
-            return result
+			return result
 
-        @staticmethod
-        def getCategoryBySubcategoryTitle(cursor: DatabaseAdapter, subcategory: str) -> sqlite3.Row:
-            """
-            Get the category of a subcategory
-            """
+		@staticmethod
+		def getCategoryBySubcategoryTitle(cursor: DatabaseAdapter, subcategory: str) -> sqlite3.Row:
+			"""
+			Get the category of a subcategory
+			"""
 
-            result = cursor.execute("""
+			result = cursor.execute("""
             SELECT Ca.id, Ca.title, Ca.description, Ca.colour,
                 (
                 SELECT json_group_array(
@@ -606,8 +608,5 @@ class Queries:
             JOIN subCategories sCa ON sCa.categoryID = Ca.id
             WHERE sCa.title = ?
             """, (subcategory,))
-            category = result[0] if result else None
-            return category
-
-
-
+			category = result[0] if result else None
+			return category

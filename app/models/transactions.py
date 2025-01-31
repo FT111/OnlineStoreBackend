@@ -10,7 +10,7 @@ class Basket(BaseModel):
 	A collection of SKU ids and their quantities.
 	"""
 	items: dict[str, dict[str, Union[str, int]]] = Field('A dictionary of SKUs with their selected quantities',
-											 examples=["{'SKU_ID': {'quantity': 1}}"])
+														 examples=["{'SKU_ID': {'quantity': 1}}"])
 
 	@field_validator('items')
 	def validate_items(cls, value):
@@ -33,7 +33,7 @@ class EnrichedBasket(Basket):
 	"""
 	items: dict[str, dict] = Field("""A dictionary of full SKU objects with 
 																	their selected quantities and parent listings""",
-																  examples=['''{'SKU_ID': {'quantity': 1,
+								   examples=['''{'SKU_ID': {'quantity': 1,
 																						'sku': SKU,
 																						'listing': Listing}}'''])
 
@@ -46,7 +46,7 @@ class Response:
 		total: int = Field('The total number of items in the basket',
 						   examples=[1])
 		value: int = Field('The total value of the basket, in pence',
-							 examples=[1])
+						   examples=[1])
 
 	class EnrichedBasketResponse(ResponseSchema[BasketMeta, EnrichedBasket]):
 		"""

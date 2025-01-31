@@ -25,7 +25,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 def requestPasswordReset(
 		resetRequest: PwdResetRequestSubmission,
 		request: Request
-		):
+):
 	"""
 	Request a password reset email
 	:param resetRequest: The request for a password reset
@@ -53,7 +53,7 @@ def requestPasswordReset(
 @router.post('/resetPassword')
 def resetPassword(
 		reset: PwdResetSubmission
-	):
+):
 	"""
 	Reset a user's password
 	:param userID: The user's ID
@@ -86,7 +86,7 @@ async def getMe(user: Dict = Depends(userRequired),
 @router.put('/', response_model=AuthResponse.Token)
 async def newUser(
 		user: UserSubmission,
-		):
+):
 	"""
 	Create a new user in the database.
 	:param conn: SQL DB connection
@@ -107,7 +107,7 @@ async def getUser(
 		userID: str,
 		includePrivileged: bool = False,
 		user: Dict = Depends(userOptional),
-		):
+):
 	"""
 	Get a user by their ID
 	:param user:
@@ -132,14 +132,12 @@ async def getUser(
 	return UserResponse.User(meta={}, data=user)
 
 
-
-
 @router.get('/{userID}/listings', response_model=ListingResponses.Listings)
 async def getUserListings(
 		userID: str,
 		includePrivileged: bool = False,
 		user: Dict = Depends(userOptional),
-		):
+):
 	"""
 	Get all listings by a user.
 	:param conn: SQL DB connection
@@ -184,7 +182,7 @@ def getUserStatistics(user=Depends(userRequired)) -> StreamingResponse:
 
 	def generateStatistics():
 		while True:
-			yield f'event: userStatsUpdate\ndata: {data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'), 
+			yield f'event: userStatsUpdate\ndata: {data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'),
 																		  datetime.now().strftime('%Y-%m-%d'))}\n\n'
 			time.sleep(4)
 

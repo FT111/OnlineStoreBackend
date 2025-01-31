@@ -1,40 +1,41 @@
-from ..listings import Listing
 import pytest
 from pydantic import ValidationError
 
+from ..listings import Listing
+
 
 def test_listing():
-    """
-    Test the validation of a listing
-    """
+	"""
+	Test the validation of a listing
+	"""
 
-    listing = Listing(
-        id=0,
-        title="Test Listing",
-        description="A test listing",
-        basePrice=100,
-        category="test",
-        rating=5,
-        subCategory="test",
-        addedAt=0,
-        ownerUser=None,
-    )
+	listing = Listing(
+		id=0,
+		title="Test Listing",
+		description="A test listing",
+		basePrice=100,
+		category="test",
+		rating=5,
+		subCategory="test",
+		addedAt=0,
+		ownerUser=None,
+	)
 
 
 def test_listing_invalid_rating():
-    """
-    Test the validation of a listing with an invalid rating
-    """
+	"""
+	Test the validation of a listing with an invalid rating
+	"""
 
-    with pytest.raises(ValidationError):
-        Listing(
-            id=0,
-            title="Test Listing",
-            description="A test listing",
-            basePrice=100,
-            category="test",
-            rating=6,
-            subCategory="test",
-            addedAt=0,
-            ownerUser=None,
-        )
+	with pytest.raises(ValidationError):
+		Listing(
+			id=0,
+			title="Test Listing",
+			description="A test listing",
+			basePrice=100,
+			category="test",
+			rating=6,
+			subCategory="test",
+			addedAt=0,
+			ownerUser=None,
+		)
