@@ -69,7 +69,7 @@ def resetPassword(
 	return {'data': 'Password reset'}
 
 
-@router.get('/me', response_model=UserResponse.User)
+@router.get('/me', response_model=UserResponse.PrivilegedUser)
 async def getMe(user: Dict = Depends(userRequired),
 				):
 	"""
@@ -78,7 +78,7 @@ async def getMe(user: Dict = Depends(userRequired),
 
 	data = DataRepository(database.db)
 
-	userDetails = data.getUserByID(user['id'])
+	userDetails = data.getUserByID(user['id'], requestUser=user, includePrivileged=True)
 
 	return UserResponse.User(meta={}, data=userDetails)
 

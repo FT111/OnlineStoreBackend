@@ -127,7 +127,11 @@ class DataRepository:
 		user = dict(user)
 		user['listingIDs'] = json.loads(user['listingIDs'])
 
-		return UserDetail(**user)
+		modelUser = PrivilegedUser(**user) if includePrivileged else UserDetail(**user)
+
+		return modelUser
+
+
 
 	def createUser(self,
 				   user: PrivilegedUser):
