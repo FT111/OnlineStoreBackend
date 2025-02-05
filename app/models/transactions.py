@@ -1,15 +1,18 @@
+from enum import Enum
 from typing import Union
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.listings import SKU
 from app.models.response import ResponseSchema
+from app.models.users import PrivilegedUser
 
 
 class Basket(BaseModel):
 	"""
 	A collection of SKU ids and their quantities.
 	"""
-	items: dict[str, dict[str, Union[str, int]]] = Field('A dictionary of SKUs with their selected quantities',
+	items: dict[str, dict[str, Union[str, int]]] = Field(description='A dictionary of SKUs with their selected quantities',
 														 examples=["{'SKU_ID': {'quantity': 1}}"])
 
 	@field_validator('items')
@@ -31,11 +34,46 @@ class EnrichedBasket(Basket):
 	"""
 	A basket is a collection of listings
 	"""
-	items: dict[str, dict] = Field("""A dictionary of full SKU objects with 
+	items: dict[str, dict] = Field(description="""A dictionary of full SKU objects with 
 																	their selected quantities and parent listings""",
 								   examples=['''{'SKU_ID': {'quantity': 1,
 																						'sku': SKU,
 																						'listing': Listing}}'''])
+
+
+class CardPaymentDetails(BaseModel):
+	"""
+	Details for a card payment
+	"""
+	cardNumber: str = Field(description='The card number')
+	cardExpiry: str = Field(description='The card expiry date')
+	cardCVV: str = Field(description='The card CVV')
+	cardHolder: str = Field(description='The card holder name')
+
+
+class Checkout(BaseModel):
+	"""
+	A full purchase
+	"""
+
+	basket: EnrichedBasket = Field(description='The basket to purchase')
+	user: PrivilegedUser = Field(description='The user making the purchase')
+	payment: Union[
+		CardPaymentDetails
+	] = Field(description='The payment method')
+
+
+class Order(BaseModel):
+	"""
+	An order of a single SKU.
+	"""
+
+	sku: SKU = Field(description='The SKU being ordered')
+	quantity: int = Field(description='The quantity of the SKU being ordered')
+	value: int = Field(description='The total value of the order, in pence')
+	status: Enum = Field(description='The status of the order')
+	recipient: PrivilegedUser = Field(description='The recipient of the order')
+	seller: PrivilegedUser = Field(description='The seller of the order')
 
 
 class Response:

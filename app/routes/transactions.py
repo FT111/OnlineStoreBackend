@@ -28,3 +28,15 @@ async def enrichBasket(
 	},
 		data=enrichedBasket
 	)
+
+
+@router.post('/checkout')
+def submitCheckout(
+		basket: Basket
+):
+	"""
+	Submit a checkout request
+
+	:return:
+	"""
+	pass
