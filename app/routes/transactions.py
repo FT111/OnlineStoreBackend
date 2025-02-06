@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from typing_extensions import Union
 
 from app.functions.data import DataRepository
 from app.models.transactions import Basket, Response, EnrichedBasket
 from ..database import database
+from ..functions.transactions import paymentHandlerFactory, PaymentHandler
 
 router = APIRouter(prefix="/transactions", tags=["Transactions", "Sales"])
 
@@ -32,11 +33,17 @@ async def enrichBasket(
 
 @router.post('/checkout')
 def submitCheckout(
-		basket: Basket
+		basket: EnrichedBasket,
+		deliveryDetails: dict,
+		paymentHandler: PaymentHandler = Depends(
+			paymentHandlerFactory
+		)
 ):
 	"""
 	Submit a checkout request
-
+	:param basket: The basket to checkout
+	:param deliveryDetails: The delivery details
+	:param paymentHandler: The payment handler to use. Determined by the user's payment method.
 	:return:
 	"""
 	pass

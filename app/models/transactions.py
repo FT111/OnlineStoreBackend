@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Union
 
@@ -41,14 +42,32 @@ class EnrichedBasket(Basket):
 																						'listing': Listing}}'''])
 
 
-class CardPaymentDetails(BaseModel):
+class PaymentDetails(ABC, BaseModel):
+	"""
+	Details for a payment
+	"""
+
+	@abstractmethod
+	def __repr__(self):
+		"""
+		The string representation of the payment method
+		Uses a model method to prevent user input from being used directly
+		:return:
+		"""
+		pass
+
+
+class CardPaymentDetails(PaymentDetails):
 	"""
 	Details for a card payment
 	"""
 	cardNumber: str = Field(description='The card number')
-	cardExpiry: str = Field(description='The card expiry date')
+	cardExpiration: str = Field(description='The card expiry date')
 	cardCVV: str = Field(description='The card CVV')
 	cardHolder: str = Field(description='The card holder name')
+
+	def __repr__(self):
+		return 'card'
 
 
 class Checkout(BaseModel):
