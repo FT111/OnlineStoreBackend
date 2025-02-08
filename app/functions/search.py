@@ -88,37 +88,38 @@ class ListingSearch(Search):
 		:param session:  A database session
 		:return:
 		"""
-		# Incrementally loads BM25 data
-		newListings = Queries.Listings.getListingsSince(session, lastTimestamp)
-		# Update the last timestamp to the current time, for the next load
 
-		if newListings:
+		while True:
+			# Incrementally loads new data to index
+			newListings = Queries.Listings.getListingsSince(session, lastTimestamp)
+			# Update the last timestamp to the current time, for the next load
 
-			loadedListingFutures = []
+			if newListings:
 
-			for id, title, description, subCategory, category, *_ in newListings:
-				# ###############################################################
-				# for categoryList in self.termFrequencies.values():
-				#     print('categoryList:', categoryList)
-				#     if id in [id for id, *_ in categoryList]:  # Remove in prod
-				#         continue
-				# ###############################################################
+				loadedListingFutures = []
 
-				# Process the document in a separate thread
-				loadedListingFutures.append(
-					self.loadExecutor.submit(self.processDocument, description, id, title, category, subCategory))
-			# self.processDocument(description, id, title, category)
+				for id, title, description, subCategory, category, *_ in newListings:
+					# ###############################################################
+					# for categoryList in self.termFrequencies.values():
+					#     print('categoryList:', categoryList)
+					#     if id in [id for id, *_ in categoryList]:  # Remove in prod
+					#         continue
+					# ###############################################################
 
-			for future in loadedListingFutures:
-				future.result()
+					# Process the document in a separate thread
+					loadedListingFutures.append(
+						self.loadExecutor.submit(self.processDocument, description, id, title, category, subCategory))
+				# self.processDocument(description, id, title, category)
 
-			self.documentCount += len(newListings)
-			self.averageDocumentLength = self.corpusLength / self.documentCount
+				for future in loadedListingFutures:
+					future.result()
 
-		# Sleep for 10 seconds before loading the table again to load new listings
-		lastTimestamp = int(time.time())
-		time.sleep(10)
-		self.loadTable(session, lastTimestamp)
+				self.documentCount += len(newListings)
+				self.averageDocumentLength = self.corpusLength / self.documentCount
+
+			# Sleep for 10 seconds before loading the table again to load new listings
+			lastTimestamp = int(time.time())
+			time.sleep(10)
 
 	def processDocument(self, description: str, id, title: str, category: str, subCategory: str):
 		"""
