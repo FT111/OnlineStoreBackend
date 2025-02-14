@@ -515,11 +515,34 @@ class Queries:
 			result = conn.execute("SELECT title FROM conditions")
 			return result
 
+		@staticmethod
+		def getSKUsByIDs(conn, skuIDs: list) -> List[sqlite3.Row]:
+
+			query = """
+			SELECT Sk.id, Sk.title, Sk.price, Sk.discount, Sk.stock,
+			(
+				SELECT json_group_array(skIm.id)
+				FROM skuImages skIm
+				WHERE skIm.skuID = Sk.id
+			) AS images,
+			(
+				SELECT json_group_object(
+					(SELECT title FROM skuTypes WHERE id = SkVa.skuTypeID), SkVa.title
+				)
+				FROM skuValues SkVa
+				WHERE SkVa.id IN ( SELECT valueID FROM skuOptions WHERE skuID = Sk.id)
+			) AS options
+			FROM skus Sk
+			WHERE Sk.id IN ({})
+			""".format(','.join('?' * len(skuIDs)))
+
+			return conn.execute(query, tuple(skuIDs))
+
 	class Analytics:
 		@staticmethod
 		def registerEvent(conn: DatabaseAdapter, event: Events.Event):
 			"""
-			Add a click event to a listing
+			Add an event to a listing
 			"""
 
 			conn.execute("""

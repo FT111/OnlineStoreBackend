@@ -131,8 +131,6 @@ class DataRepository:
 
 		return modelUser
 
-
-
 	def createUser(self,
 				   user: PrivilegedUser):
 		"""
@@ -314,6 +312,21 @@ class DataRepository:
 			castedListings.append(listingDict)
 		return castedListings
 
+	@staticmethod
+	def parseSKUs(skus: list[sqlite3.Row]) -> list[SKU]:
+		"""
+		Parse a list of SKUs from the database
+		:param skus: List of sqlite3.Row objects
+		:return:
+		"""
+
+		parsedRows = ['options', 'images']
+		skus = [dict(sku) for sku in skus]
+		skus = [SKUWithStock(**{key: json.loads(sku[key]) if key in parsedRows else sku[key] for key in sku})
+				for sku in skus]
+
+		return skus
+
 	def getCategoryBySubcategoryTitle(self, subcategoryTitle) -> Optional[Category]:
 		"""
 		Get a category by its subcategory title
@@ -469,6 +482,7 @@ class DataRepository:
 		:return:
 		"""
 
+		# Hash the token, as it is stored in the database
 		hashedId = auth.hashValue(reset.token)
 
 		# Check if the reset request exists
@@ -477,9 +491,11 @@ class DataRepository:
 			raise HTTPException(status_code=404, detail="Reset request not found")
 		existingResetRequest = existingResetRequest[0]
 
+		# Check if the reset request is expired
 		if existingResetRequest['addedAt'] < time.time() - 1800:
 			raise HTTPException(status_code=400, detail="Reset request expired")
 
+		# Ensure the user exists
 		user = Queries.Users.getUserByID(self.conn, existingResetRequest['userID'])
 		if not user:
 			raise HTTPException(status_code=404, detail="User not found")
@@ -492,3 +508,16 @@ class DataRepository:
 
 		# Delete the reset request
 		Queries.Users.deletePasswordReset(self.conn, hashedId)
+
+	def idsToSKUs(self, skuIDs, desiredObj: type[SKU]) -> list[type[SKU]]:
+		"""
+		Get a SKU by its ID
+		:param skuIDs: List of SKU IDs
+		:param desiredObj: The type of SKU object needed
+		:return:
+		"""
+
+		skus: list[sqlite3.Row] = Queries.Listings.getSKUsByIDs(self.conn, skuIDs)
+		skus = [desiredObj(**dict(sku)) for sku in self.parseSKUs(skus)]
+
+		return skus
