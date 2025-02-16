@@ -86,6 +86,9 @@ SELECT
         ) THEN 1
         ELSE 0
     END AS hasDiscount,
+    
+	(SELECT sum(Sk.stock) FROM skus Sk WHERE Sk.listingID = Li.id) AS totalStock,
+    
     CASE
         WHEN count(Sk.id) > 1 THEN 1
         ELSE 0
@@ -435,7 +438,8 @@ class Queries:
 			"""
 			query = listingBaseQuery.format("""
             WHERE Li.id IN ({}) AND
-            Li.public = 1
+            Li.public = 1 AND
+            totalStock > 0
             """.format(','.join('?' * len(listingIDs))))
 
 			result = cursor.execute(query, listingIDs)
@@ -537,6 +541,15 @@ class Queries:
 			""".format(','.join('?' * len(skuIDs)))
 
 			return conn.execute(query, tuple(skuIDs))
+
+	class Transactions:
+		@staticmethod
+		def addCheckout(cursor: DatabaseAdapter, checkout):
+			"""
+			Add a transaction to the database
+			"""
+
+			pass
 
 	class Analytics:
 		@staticmethod

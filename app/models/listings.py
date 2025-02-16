@@ -13,11 +13,12 @@ class SKU(BaseModel):
 	"""
 	id: str = Field(..., title="Product SKU", description="The SKU of the product")
 	title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
-	images: List[str] = Field([], title="Product Images", description="The images of the product SKU")
+	images: list[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
 	price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
 	discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
+	stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
-	options: Optional[Dict[str, str]] = Field({}, title="SKU Option Values",
+	options: Optional[dict[Optional[str], Optional[str]]] = Field({}, title="SKU Option Values",
 											  description="The values of the SKU's assigned options, "
 														  "paired with the option type",
 											  )
@@ -119,6 +120,7 @@ class Listing(BaseModel):
 	hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")
 	multipleSKUs: bool = Field(False, title="Multiple SKUs",
 							   description="Whether the product listing has multiple SKUs")
+	totalStock: Optional[int] = Field(0, title="Total Stock", description="The total stock of all child SKUs")
 	views: int = Field(0, title="Product Views", description="The number of views of the product listing")
 	rating: float = Field(0, title="Product Rating", description="The rating of the product listing")
 	addedAt: Optional[int] = Field(..., title="Added At", description="The datetime the product listing was added")
@@ -142,6 +144,10 @@ class Listing(BaseModel):
 		if len(value) < 1 or len(value) > 40:
 			raise ValueError('Title must be between 1 and 40 characters')
 		return value
+
+	@field_validator("totalStock")
+	def returnDefaultIfNone(cls, value):
+		return value or 0
 
 	# @classmethod
 	# @field_validator("skus")
