@@ -64,6 +64,14 @@ class SKUWithStock(SKU):
 		return value
 
 
+class SKUWithUser(SKU):
+	"""
+	Contains the seller's user data, inherits from SKU.
+	"""
+	ownerUser: Optional[Union[User, Dict]] = Field(..., title="Owner User",
+												   description="The owner of the product SKU")
+
+
 class SKUSubmission(BaseModel):
 	"""
 	SKU Submission Model

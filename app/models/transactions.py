@@ -1,3 +1,5 @@
+import dataclasses
+import uuid
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Union
@@ -6,15 +8,16 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.listings import SKU
 from app.models.response import ResponseSchema
-from app.models.users import PrivilegedUser
+from app.models.users import PrivilegedUser, User
 
 
 class Basket(BaseModel):
 	"""
 	A collection of SKU ids and their quantities.
 	"""
-	items: dict[str, dict[str, Union[str, int]]] = Field(description='A dictionary of SKUs with their selected quantities',
-														 examples=["{'SKU_ID': {'quantity': 1}}"])
+	items: dict[str, dict[str, Union[str, int]]] = Field(
+		description='A dictionary of SKUs with their selected quantities',
+		examples=["{'SKU_ID': {'quantity': 1}}"])
 
 	@field_validator('items')
 	def validate_items(cls, value):
@@ -70,6 +73,16 @@ class CardPaymentDetails(PaymentDetails):
 		return 'card'
 
 
+@dataclasses.dataclass
+class SKUPurchase:
+	"""
+	A purchase of an individual SKU
+	"""
+	sku: SKU
+	quantity: int
+	value: int
+
+
 class Checkout(BaseModel):
 	"""
 	A full purchase
@@ -82,17 +95,59 @@ class Checkout(BaseModel):
 	] = Field(description='The payment method')
 
 
+@dataclasses.dataclass
+class InternalCheckout:
+	"""
+	A full purchase
+	"""
+
+	basket: EnrichedBasket
+	user: PrivilegedUser
+	payment: Union[
+		CardPaymentDetails
+	]
+
+
+class OrderStatuses(str, Enum):
+	"""
+	Different possible statuses for an order
+	"""
+	PROCESSING = 'Processing'
+	DISPATCHED = 'Dispatched'
+	OUT_FOR_DELIVERY = 'Delivered'
+	DELIVERED = 'Delivered'
+
+
 class Order(BaseModel):
 	"""
 	An order of a single SKU.
 	"""
 
-	sku: SKU = Field(description='The SKU being ordered')
-	quantity: int = Field(description='The quantity of the SKU being ordered')
+	id: str = Field(description='The unique ID of the order')
+	skus: list[SKUPurchase] = Field(description='The SKUs in the order')
 	value: int = Field(description='The total value of the order, in pence')
-	status: Enum = Field(description='The status of the order')
-	recipient: PrivilegedUser = Field(description='The recipient of the order')
-	seller: PrivilegedUser = Field(description='The seller of the order')
+	status: OrderStatuses = Field(description='The status of the order', examples=[OrderStatuses.PROCESSING])
+	recipient: User = Field(description='The recipient user of the order')
+	seller: User = Field(description='The user fulfilling the order')
+	addedAt: int = Field(description='The date the order was added')
+	updatedAt: int = Field(description='The date the order was last updated')
+	purchaseID: str = Field(description='The ID of the purchase that the order is part of')
+
+
+class InternalOrder(BaseModel):
+	"""
+	An order of a single SKU.
+	"""
+
+	id: str
+	skus: list[SKUPurchase]
+	value: int
+	status: OrderStatuses
+	seller: User
+	recipient: User
+	addedAt: int
+	updatedAt: int
+	purchaseID: str
 
 
 class Response:
@@ -105,8 +160,20 @@ class Response:
 		value: int = Field('The total value of the basket, in pence',
 						   examples=[1])
 
+	class CheckoutMeta(BaseModel):
+		"""
+		Metadata for a checkout response
+		"""
+		purchaseID: str = Field('The ID of the completed purchase', examples=[str(uuid.uuid4())])
+
 	class EnrichedBasketResponse(ResponseSchema[BasketMeta, EnrichedBasket]):
 		"""
 		A response containing an enriched basket
+		"""
+		pass
+
+	class CheckoutResponse(ResponseSchema[CheckoutMeta, list[Order]]):
+		"""
+		A response containing a completed purchase
 		"""
 		pass

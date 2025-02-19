@@ -7,6 +7,7 @@ from typing_extensions import List, Union, Optional
 from app.database.database import SQLiteAdapter, DatabaseAdapter
 from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
+from app.models.transactions import InternalOrder
 from app.models.users import PwdResetRequest
 
 listingBaseQuery = """
@@ -111,6 +112,27 @@ LEFT JOIN conditions Co ON Co.id = Li.conditionID
 {}
 GROUP BY Li.id, Ca.title, sCa.title, Us.id
             """
+
+orderQuery = """
+SELECT Ord.id, Ord.value, Ord.status, Ord.addedAt, Ord.updatedAt, Ord.purchaseID,
+json_group_array(
+	json_object(
+		'id', Sk.id,
+		'title', Sk.title,
+		'price', Sk.price,
+		'discount', Sk.discount,
+		'stock', Sk.stock,
+		'images', (
+			SELECT json_group_array(skIm.id)
+			FROM skuImages skIm
+			WHERE skIm.skuID = Sk.id
+		)
+	)
+) AS skus
+FROM orders Ord
+JOIN orderSkus OS ON Ord.id = OS.orderID
+JOIN skus Sk ON OS.skuID = Sk.id
+"""
 
 
 class Queries:
@@ -524,6 +546,12 @@ class Queries:
 
 			query = """
 			SELECT Sk.id, Sk.title, Sk.price, Sk.discount, Sk.stock,
+			json_object(
+				'id', Us.id,
+				'username', Us.username,
+				'description', Us.description,
+				'joinedAt', Us.joinedAt
+			) AS ownerUser,
 			(
 				SELECT json_group_array(skIm.id)
 				FROM skuImages skIm
@@ -537,10 +565,20 @@ class Queries:
 				WHERE SkVa.id IN ( SELECT valueID FROM skuOptions WHERE skuID = Sk.id)
 			) AS options
 			FROM skus Sk
+			LEFT JOIN listings Li ON Li.id = Sk.listingID
+			LEFT JOIN users Us ON Us.id = Li.ownerID
 			WHERE Sk.id IN ({})
 			""".format(','.join('?' * len(skuIDs)))
 
 			return conn.execute(query, tuple(skuIDs))
+
+		@staticmethod
+		def updateSKUStock(conn, id, stock):
+			conn.execute("""
+			UPDATE skus
+			SET stock = ?
+			WHERE id = ?
+			""", (stock, id))
 
 	class Transactions:
 		@staticmethod
@@ -550,6 +588,56 @@ class Queries:
 			"""
 
 			pass
+
+		@staticmethod
+		def addOrder(conn, order: InternalOrder):
+			"""
+			Add an order to the database
+			:param conn: A connection to the database
+			:param order: The order to add
+			:return:
+			"""
+
+			result = conn.execute("""
+			INSERT INTO orders (id, value, status, userID, addedAt, updatedAt, purchaseID)
+			VALUES (?,?,?,?,?,?,?)
+			""", (order.id, order.value, order.status, order.recipient.id, order.addedAt, order.updatedAt, order.purchaseID,))
+
+			conn.executemany("""
+			INSERT INTO orderSkus (orderID, skuID, quantity)
+			VALUES (?,?,?)
+			""", [(order.id, sku.sku.id, sku.quantity,) for sku in order.skus])
+
+			return result
+
+		@staticmethod
+		def getSaleOrdersByUserID(conn, id):
+			"""
+			Get all sale orders by a user
+			:param conn:
+			:param id:
+			:return:
+			"""
+
+			return conn.execute(
+				orderQuery + """
+							JOIN listings Li ON Sk.listingID = Li.id
+							WHERE Li.ownerID = ?
+			""", (id,))
+
+		@staticmethod
+		def getPurchaseOrdersByUserID(conn, id):
+			"""
+			Get all purchase orders by a user
+			:param conn:
+			:param id:
+			:return:
+			"""
+
+			return conn.execute(
+				orderQuery + """
+							WHERE Ord.userID = ?
+			""", (id,))
 
 	class Analytics:
 		@staticmethod

@@ -169,6 +169,23 @@ async def getUserListings(
 	}, data=listings)
 
 
+@router.get('/{userID}/orders')
+def getUserOrders(
+		user=Depends(userRequired),
+):
+	"""
+	Get all orders by a user
+	:param user: The user to get orders for
+	:return: The user's orders
+	"""
+
+	data = DataRepository(database.db)
+
+	orders = data.getOrdersByUserID(user['id'])
+
+	return {'data': orders}
+
+
 @router.get('/{userID}/updates')
 def getUserStatistics(user=Depends(userRequired)) -> StreamingResponse:
 	"""

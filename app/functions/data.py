@@ -15,7 +15,7 @@ from app.functions import auth
 from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
-	SKUSubmission, SKU
+	SKUSubmission, SKU, SKUWithUser
 from app.models.transactions import Basket, EnrichedBasket
 from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
@@ -320,9 +320,9 @@ class DataRepository:
 		:return:
 		"""
 
-		parsedRows = ['options', 'images']
+		parsedRows = ['options', 'images', 'ownerUser']
 		skus = [dict(sku) for sku in skus]
-		skus = [SKUWithStock(**{key: json.loads(sku[key]) if key in parsedRows else sku[key] for key in sku})
+		skus = [SKUWithUser(**{key: json.loads(sku[key]) if key in parsedRows else sku[key] for key in sku})
 				for sku in skus]
 
 		return skus
@@ -509,7 +509,7 @@ class DataRepository:
 		# Delete the reset request
 		Queries.Users.deletePasswordReset(self.conn, hashedId)
 
-	def idsToSKUs(self, skuIDs, desiredObj: type[SKU]) -> list[type[SKU]]:
+	def idsToSKUs(self, skuIDs, desiredObj: SKU) -> list:
 		"""
 		Get a SKU by its ID
 		:param skuIDs: List of SKU IDs
@@ -518,6 +518,38 @@ class DataRepository:
 		"""
 
 		skus: list[sqlite3.Row] = Queries.Listings.getSKUsByIDs(self.conn, skuIDs)
-		skus = [desiredObj(**dict(sku)) for sku in self.parseSKUs(skus)]
+		skus: list[SKU] = [desiredObj(**dict(sku)) for sku in self.parseSKUs(skus)]
 
 		return skus
+
+	def addOrder(self, order):
+		"""
+		Add an order to the database
+		:param order: Order object
+		:return:
+		"""
+
+		Queries.Transactions.addOrder(self.conn, order)
+
+	def updateSKUStock(self, id, stock):
+		"""
+		Update the stock of a SKU to a given value
+		:param id:
+		:param stock:
+		:return:
+		"""
+
+		Queries.Listings.updateSKUStock(self.conn, id, stock)
+
+	def getOrdersByUserID(self, id):
+		"""
+		Get all orders by a user.
+		Split into sales and purchase orders
+		:param id: User's ID
+		:return:
+		"""
+
+		saleOrders = Queries.Transactions.getSaleOrdersByUserID(self.conn, id)
+		purchaseOrders = Queries.Transactions.getPurchaseOrdersByUserID(self.conn, id)
+
+
