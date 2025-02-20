@@ -1,0 +1,7 @@
+
+EBUY_IBAN = {
+	'COUNTRY': 'GB',
+	'BANK_CODE': 'XXXX',
+	'SORT': 'XXXXXX',
+	'ACCOUNT_NUMBER': 'XXXXXXXX'
+}

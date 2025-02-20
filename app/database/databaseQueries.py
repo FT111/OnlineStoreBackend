@@ -114,24 +114,42 @@ GROUP BY Li.id, Ca.title, sCa.title, Us.id
             """
 
 orderQuery = """
-SELECT Ord.id, Ord.value, Ord.status, Ord.addedAt, Ord.updatedAt, Ord.purchaseID,
+SELECT Ord.id, Ord.status, Ord.addedAt, Ord.updatedAt, Ord.purchaseID,
 json_group_array(
 	json_object(
 		'id', Sk.id,
 		'title', Sk.title,
-		'price', Sk.price,
+		'price', OS.price,
 		'discount', Sk.discount,
 		'stock', Sk.stock,
+		'quantity', OS.quantity,
 		'images', (
 			SELECT json_group_array(skIm.id)
 			FROM skuImages skIm
 			WHERE skIm.skuID = Sk.id
 		)
 	)
-) AS skus
+) AS skus,
+json_object(
+	'id', ReUs.id,
+	'username', ReUs.username,
+	'description', ReUs.description,
+	'joinedAt', ReUs.joinedAt
+) AS recipient,
+json_object(
+	'id', OwUs.id,
+	'username', OwUs.username,
+	'description', OwUs.description,
+	'joinedAt', OwUs.joinedAt
+) AS seller
 FROM orders Ord
-JOIN orderSkus OS ON Ord.id = OS.orderID
-JOIN skus Sk ON OS.skuID = Sk.id
+LEFT JOIN orderSkus OS ON Ord.id = OS.orderID
+LEFT JOIN skus Sk ON OS.skuID = Sk.id
+LEFT JOIN listings Li ON Sk.listingID = Li.id
+LEFT JOIN users OwUs ON OwUs.id = Li.ownerID
+LEFT JOIN users ReUs ON ReUs.id = Ord.userID
+{}
+GROUP BY Ord.id
 """
 
 
@@ -599,14 +617,14 @@ class Queries:
 			"""
 
 			result = conn.execute("""
-			INSERT INTO orders (id, value, status, userID, addedAt, updatedAt, purchaseID)
-			VALUES (?,?,?,?,?,?,?)
-			""", (order.id, order.value, order.status, order.recipient.id, order.addedAt, order.updatedAt, order.purchaseID,))
+			INSERT INTO orders (id, status, userID, addedAt, updatedAt, purchaseID)
+			VALUES (?,?,?,?,?,?)
+			""", (order.id, order.status, order.recipient.id, order.addedAt, order.updatedAt, order.purchaseID,))
 
 			conn.executemany("""
-			INSERT INTO orderSkus (orderID, skuID, quantity)
-			VALUES (?,?,?)
-			""", [(order.id, sku.sku.id, sku.quantity,) for sku in order.skus])
+			INSERT INTO orderSkus (orderID, skuID, quantity, price)
+			VALUES (?,?,?,?)
+			""", [(order.id, sku.sku.id, sku.quantity, sku.value) for sku in order.skus])
 
 			return result
 
@@ -620,10 +638,9 @@ class Queries:
 			"""
 
 			return conn.execute(
-				orderQuery + """
-							JOIN listings Li ON Sk.listingID = Li.id
+				orderQuery.format("""
 							WHERE Li.ownerID = ?
-			""", (id,))
+			"""), (id,))
 
 		@staticmethod
 		def getPurchaseOrdersByUserID(conn, id):
@@ -635,9 +652,9 @@ class Queries:
 			"""
 
 			return conn.execute(
-				orderQuery + """
+				orderQuery.format("""
 							WHERE Ord.userID = ?
-			""", (id,))
+			"""), (id,))
 
 	class Analytics:
 		@staticmethod

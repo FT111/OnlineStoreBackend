@@ -16,7 +16,7 @@ from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU, SKUWithUser
-from app.models.transactions import Basket, EnrichedBasket
+from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase
 from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
 
@@ -549,7 +549,33 @@ class DataRepository:
 		:return:
 		"""
 
-		saleOrders = Queries.Transactions.getSaleOrdersByUserID(self.conn, id)
-		purchaseOrders = Queries.Transactions.getPurchaseOrdersByUserID(self.conn, id)
+		# Get the user's orders from the database
+		orders = dict(
+			sales=Queries.Transactions.getSaleOrdersByUserID(self.conn, id),
+			purchases=Queries.Transactions.getPurchaseOrdersByUserID(self.conn, id)
+		)
 
+		# Convert the orders to Order objects and calculate the order value
+		for orderType in orders:
+			for index, order in enumerate(orders[orderType]):
+				order = dict(order)
+				order['value'], order['quantity'] = 0, 0
 
+				# Convert SKU JSON to SKU objects
+				order['skus'] = json.loads(order['skus'])
+				for i, sku in enumerate(order['skus']):
+					order['value'] += sku['price'] * sku['quantity']
+					order['skus'][i] = SKUPurchase(
+						sku=SKU(**dict(sku)),
+						quantity=sku.get('quantity'),
+						value=sku.get('price')*sku.get('quantity')
+					)
+
+				order['recipient'] = json.loads(order['recipient'])
+				order['seller'] = json.loads(order['seller'])
+
+				orders[orderType][index] = Order(**order)
+
+		orders = UserOrders(**orders)
+
+		return orders

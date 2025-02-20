@@ -150,6 +150,14 @@ class InternalOrder(BaseModel):
 	purchaseID: str
 
 
+class UserOrders(BaseModel):
+	"""
+	A user's orders
+	"""
+	purchases: list[Order] = Field(description='The user\'s orders')
+	sales: list[Order] = Field(description='The user\'s sales')
+
+
 class Response:
 	class BasketMeta(BaseModel):
 		"""
