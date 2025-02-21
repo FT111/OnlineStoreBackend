@@ -127,28 +127,23 @@ json_group_array(
 			SELECT json_group_array(skIm.id)
 			FROM skuImages skIm
 			WHERE skIm.skuID = Sk.id
+		),
+		'listing', json_object(
+			'id', Li.id,
+			'title', Li.title,
+			'description', Li.description,
+			'addedAt', Li.addedAt
 		)
 	)
 ) AS skus,
-json_object(
-	'id', ReUs.id,
-	'username', ReUs.username,
-	'description', ReUs.description,
-	'joinedAt', ReUs.joinedAt
-) AS recipient,
-json_object(
-	'id', OwUs.id,
-	'username', OwUs.username,
-	'description', OwUs.description,
-	'joinedAt', OwUs.joinedAt
-) AS seller
+{selection}
 FROM orders Ord
 LEFT JOIN orderSkus OS ON Ord.id = OS.orderID
 LEFT JOIN skus Sk ON OS.skuID = Sk.id
 LEFT JOIN listings Li ON Sk.listingID = Li.id
 LEFT JOIN users OwUs ON OwUs.id = Li.ownerID
 LEFT JOIN users ReUs ON ReUs.id = Ord.userID
-{}
+{condition}
 GROUP BY Ord.id
 """
 
@@ -638,7 +633,24 @@ class Queries:
 			"""
 
 			return conn.execute(
-				orderQuery.format("""
+				orderQuery.format(
+					selection="""
+					json_object(
+						'id', ReUs.id,
+						'username', ReUs.username,
+						'firstName', ReUs.firstName,
+						'surname', ReUs.surname,
+						'description', ReUs.description,
+						'addressLine1', ReUs.addressLine1,
+						'addressLine2', ReUs.addressLine2,
+						'city', ReUs.city,
+						'country', ReUs.country,
+						'postcode', ReUs.postcode,
+						'emailAddress', ReUs.emailAddress,
+						'joinedAt', ReUs.joinedAt
+					) AS recipient
+					""",
+					condition="""
 							WHERE Li.ownerID = ?
 			"""), (id,))
 
@@ -652,7 +664,16 @@ class Queries:
 			"""
 
 			return conn.execute(
-				orderQuery.format("""
+				orderQuery.format(
+					selection="""
+					json_object(
+						'id', OwUs.id,
+						'username', OwUs.username,
+						'description', OwUs.description,
+						'addedAt', OwUs.joinedAt
+					) AS seller
+					""",
+					condition="""
 							WHERE Ord.userID = ?
 			"""), (id,))
 

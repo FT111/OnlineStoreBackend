@@ -108,6 +108,16 @@ class SKUSubmission(BaseModel):
 		return value
 
 
+class ShortListing(BaseModel):
+	"""
+	Contains only the necessary data to display a listing
+	"""
+	id: Union[str, int] = Field(..., title="Product ID", description="The ID of the product listing")
+	title: str = Field(..., title="Product Title", description="The title of the product listing")
+	description: str = Field(..., title="Product Description", description="The description of the product listing")
+	addedAt: int = Field(..., title="Added At", description="The datetime the product listing was added")
+
+
 class Listing(BaseModel):
 	"""
 	Product Listing, can contain multiple SKUs

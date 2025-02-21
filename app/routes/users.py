@@ -171,17 +171,22 @@ async def getUserListings(
 
 @router.get('/{userID}/orders')
 def getUserOrders(
+		userID: str,
 		user=Depends(userRequired),
 ):
 	"""
 	Get all orders by a user
-	:param user: The user to get orders for
+	:param user: The authenticated user
+	:param userID: The user's id
 	:return: The user's orders
 	"""
 
+	if user['id'] != userID:
+		raise HTTPException(status_code=403, detail="Cannot retrieve another user's orders")
+
 	data = DataRepository(database.db)
 
-	orders = data.getOrdersByUserID(user['id'])
+	orders = data.getOrdersByUserID(userID)
 
 	return {'data': orders}
 

@@ -84,6 +84,7 @@ def submitCheckout(
 
 		ordersPerSeller[sku.ownerUser.id].append(SKUPurchase(
 			sku=sku,
+			listing=None,
 			quantity=basket.items[sku.id]['quantity'],
 			value=sku.price * basket.items[sku.id]['quantity']
 		))

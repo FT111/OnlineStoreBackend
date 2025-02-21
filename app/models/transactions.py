@@ -5,8 +5,9 @@ from enum import Enum
 from typing import Union
 
 from pydantic import BaseModel, Field, field_validator
+from typing_extensions import Optional
 
-from app.models.listings import SKU
+from app.models.listings import SKU, ShortListing
 from app.models.response import ResponseSchema
 from app.models.users import PrivilegedUser, User
 
@@ -79,6 +80,7 @@ class SKUPurchase:
 	A purchase of an individual SKU
 	"""
 	sku: SKU
+	listing: Optional[ShortListing]
 	quantity: int
 	value: int
 
@@ -127,8 +129,8 @@ class Order(BaseModel):
 	skus: list[SKUPurchase] = Field(description='The SKUs in the order')
 	value: int = Field(description='The total value of the order, in pence')
 	status: OrderStatuses = Field(description='The status of the order', examples=[OrderStatuses.PROCESSING])
-	recipient: User = Field(description='The recipient user of the order')
-	seller: User = Field(description='The user fulfilling the order')
+	recipient: Optional[PrivilegedUser] = Field(description='The recipient user of the order')
+	seller: Optional[User] = Field(description='The user fulfilling the order')
 	addedAt: int = Field(description='The date the order was added')
 	updatedAt: int = Field(description='The date the order was last updated')
 	purchaseID: str = Field(description='The ID of the purchase that the order is part of')

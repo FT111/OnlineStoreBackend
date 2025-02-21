@@ -15,7 +15,7 @@ from app.functions import auth
 from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
-	SKUSubmission, SKU, SKUWithUser
+	SKUSubmission, SKU, SKUWithUser, ShortListing
 from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase
 from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
@@ -557,23 +557,32 @@ class DataRepository:
 
 		# Convert the orders to Order objects and calculate the order value
 		for orderType in orders:
+
+			# Loops through each order
 			for index, order in enumerate(orders[orderType]):
 				order = dict(order)
 				order['value'], order['quantity'] = 0, 0
 
 				# Convert SKU JSON to SKU objects
 				order['skus'] = json.loads(order['skus'])
+				# Loop through each product SKU in the order
 				for i, sku in enumerate(order['skus']):
+
+					# Add to the overall order value
 					order['value'] += sku['price'] * sku['quantity']
+
+					# Convert the SKU to an SKUPurchase object with the listing
 					order['skus'][i] = SKUPurchase(
 						sku=SKU(**dict(sku)),
+						listing=ShortListing(**dict(sku['listing'])),
 						quantity=sku.get('quantity'),
 						value=sku.get('price')*sku.get('quantity')
 					)
 
-				order['recipient'] = json.loads(order['recipient'])
-				order['seller'] = json.loads(order['seller'])
+				order['recipient'] = json.loads(order['recipient']) if order.get('recipient') else None
+				order['seller'] = json.loads(order['seller']) if order.get('seller') else None
 
+				# Convert the order to an Order object
 				orders[orderType][index] = Order(**order)
 
 		orders = UserOrders(**orders)
