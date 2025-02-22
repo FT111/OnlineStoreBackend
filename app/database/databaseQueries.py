@@ -677,6 +677,73 @@ class Queries:
 							WHERE Ord.userID = ?
 			"""), (id,))
 
+		@staticmethod
+		def getOrder(conn, orderID):
+
+			order = conn.execute("""
+			SELECT Ord.id, Ord.status, Ord.addedAt, Ord.updatedAt, Ord.purchaseID,
+			json_group_array(
+				json_object(
+					'id', Sk.id,
+					'title', Sk.title,
+					'price', OS.price,
+					'discount', Sk.discount,
+					'stock', Sk.stock,
+					'quantity', OS.quantity,
+					'images', (
+						SELECT json_group_array(skIm.id)
+						FROM skuImages skIm
+						WHERE skIm.skuID = Sk.id
+					),
+					'listing', json_object(
+						'id', Li.id,
+						'title', Li.title,
+						'description', Li.description,
+						'addedAt', Li.addedAt
+					)
+				)
+			) AS skus,
+			json_object(
+				'id', Us.id,
+				'username', Us.username,
+				'description', Us.description,
+				'joinedAt', Us.joinedAt
+			) AS seller,
+			json_object(
+				'id', ReUS.id,
+				'username', ReUS.username,
+				'description', ReUS.description,
+				'joinedAt', ReUS.joinedAt
+			) AS recipient
+			
+			FROM orders Ord
+			LEFT JOIN orderSkus OS ON Ord.id = OS.orderID
+			LEFT JOIN skus Sk ON OS.skuID = Sk.id
+			LEFT JOIN listings Li ON Sk.listingID = Li.id
+			LEFT JOIN users Us ON Us.id = Li.ownerID
+			LEFT JOIN users ReUS ON ReUS.id = Ord.userID
+			WHERE Ord.id = ?
+			GROUP BY Ord.id
+			""", (orderID,))
+
+			return order[0] if order else None
+
+		@staticmethod
+		def updateOrderStatus(conn, orderID, status):
+			"""
+			Update an order's status
+			:param conn:
+			:param orderID:
+			:param status:
+			:return:
+			"""
+
+			return conn.execute("""
+			UPDATE orders
+			SET status = ?
+			WHERE id = ?
+			""", (status, orderID))
+
 	class Analytics:
 		@staticmethod
 		def registerEvent(conn: DatabaseAdapter, event: Events.Event):

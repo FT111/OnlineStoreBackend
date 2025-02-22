@@ -118,6 +118,7 @@ class OrderStatuses(str, Enum):
 	DISPATCHED = 'Dispatched'
 	OUT_FOR_DELIVERY = 'Delivered'
 	DELIVERED = 'Delivered'
+	CANCELLED = 'Cancelled'
 
 
 class Order(BaseModel):
@@ -161,6 +162,12 @@ class UserOrders(BaseModel):
 
 
 class Response:
+	class OrderMeta(BaseModel):
+		"""
+		Metadata for an order response
+		"""
+		pass
+
 	class BasketMeta(BaseModel):
 		"""
 		Metadata for a basket response
@@ -185,5 +192,11 @@ class Response:
 	class CheckoutResponse(ResponseSchema[CheckoutMeta, list[Order]]):
 		"""
 		A response containing a completed purchase
+		"""
+		pass
+
+	class OrderResponse(ResponseSchema[OrderMeta, Order]):
+		"""
+		A response containing an order
 		"""
 		pass

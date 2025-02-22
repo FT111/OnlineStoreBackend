@@ -588,3 +588,46 @@ class DataRepository:
 		orders = UserOrders(**orders)
 
 		return orders
+
+	def getOrderByID(self, orderID):
+		"""
+		Get an order by its ID
+		:param orderID:
+		:return:
+		"""
+
+		order = Queries.Transactions.getOrder(self.conn, orderID)
+		if not order:
+			raise HTTPException(status_code=404, detail="Order not found")
+
+		order = dict(order)
+		order['skus'] = json.loads(order['skus'])
+		order['value'] = 0
+
+		# Convert the SKUs to SKUPurchase objects
+		for i, sku in enumerate(order['skus']):
+			order['skus'][i] = SKUPurchase(
+				sku=SKU(**dict(sku)),
+				listing=ShortListing(**dict(sku['listing'])),
+				quantity=sku.get('quantity'),
+				value=sku.get('price') * sku.get('quantity')
+			)
+			order['value'] += sku['price'] * sku['quantity']
+
+		order['recipient'] = json.loads(order['recipient']) if order.get('recipient') else None
+		order['seller'] = json.loads(order['seller']) if order.get('seller') else None
+
+		order = Order(**order)
+
+		return order
+
+	def updateOrderStatus(self, orderID, status):
+		"""
+		Update an order's status
+		:param orderID:
+		:param status:
+		:return:
+		"""
+
+		Queries.Transactions.updateOrderStatus(self.conn, orderID, status)
+

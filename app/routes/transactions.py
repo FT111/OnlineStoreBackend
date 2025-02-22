@@ -119,3 +119,37 @@ def submitCheckout(
 		},
 		data=orders
 	)
+
+
+@router.put('/{orderID}', response_model=Response.OrderResponse)
+def updateOrder(
+		orderID: str,
+		updatedOrder: Order,
+		user=Depends(userRequired)
+):
+	"""
+	Update an order.
+	Recipients can update to CANCELLED, sellers can update to any status.
+	:param orderID: The ID of the order to update
+	:param updatedOrder: The updated order
+	:param user: The user updating the order
+	:return:
+	"""
+
+	data = DataRepository(database.db)
+
+	order = data.getOrderByID(orderID)
+
+	if not order:
+		raise HTTPException(404, f"Order {orderID} not found")
+
+	if order.seller.id != user['id']:
+		if updatedOrder.status != OrderStatuses.CANCELLED or order.recipient.id != user['id']:
+			raise HTTPException(403, "You do not have permission to update this order")
+
+	data.updateOrderStatus(orderID, updatedOrder.status)
+
+	return Response.OrderResponse(
+		meta={},
+		data=order
+	)
