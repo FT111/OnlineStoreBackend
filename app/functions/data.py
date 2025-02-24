@@ -629,5 +629,6 @@ class DataRepository:
 		:return:
 		"""
 
-		Queries.Transactions.updateOrderStatus(self.conn, orderID, status)
+		updateTime = int(time.time())
+		Queries.Transactions.updateOrderStatus(self.conn, orderID, status, updateTime)
 

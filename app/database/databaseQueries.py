@@ -707,13 +707,19 @@ class Queries:
 				'id', Us.id,
 				'username', Us.username,
 				'description', Us.description,
-				'joinedAt', Us.joinedAt
+				'joinedAt', Us.joinedAt,
+				'firstName', Us.firstName,
+				'surname', Us.surname,
+				'emailAddress', Us.emailAddress
 			) AS seller,
 			json_object(
 				'id', ReUS.id,
 				'username', ReUS.username,
 				'description', ReUS.description,
-				'joinedAt', ReUS.joinedAt
+				'joinedAt', ReUS.joinedAt,
+				'firstName', ReUS.firstName,
+				'surname', ReUS.surname,
+				'emailAddress', ReUS.emailAddress
 			) AS recipient
 			
 			FROM orders Ord
@@ -729,7 +735,7 @@ class Queries:
 			return order[0] if order else None
 
 		@staticmethod
-		def updateOrderStatus(conn, orderID, status):
+		def updateOrderStatus(conn, orderID, status, updateTime):
 			"""
 			Update an order's status
 			:param conn:
@@ -740,9 +746,9 @@ class Queries:
 
 			return conn.execute("""
 			UPDATE orders
-			SET status = ?
+			SET status = ?, updatedAt = ?
 			WHERE id = ?
-			""", (status, orderID))
+			""", (status, updateTime, orderID))
 
 	class Analytics:
 		@staticmethod

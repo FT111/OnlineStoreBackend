@@ -116,7 +116,7 @@ class OrderStatuses(str, Enum):
 	"""
 	PROCESSING = 'Processing'
 	DISPATCHED = 'Dispatched'
-	OUT_FOR_DELIVERY = 'Delivered'
+	OUT_FOR_DELIVERY = 'Out for delivery'
 	DELIVERED = 'Delivered'
 	CANCELLED = 'Cancelled'
 

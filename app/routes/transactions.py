@@ -147,9 +147,12 @@ def updateOrder(
 		if updatedOrder.status != OrderStatuses.CANCELLED or order.recipient.id != user['id']:
 			raise HTTPException(403, "You do not have permission to update this order")
 
+	if order.status == OrderStatuses.CANCELLED:
+		raise HTTPException(409, "Order is cancelled and cannot be updated")
+
 	data.updateOrderStatus(orderID, updatedOrder.status)
 
 	return Response.OrderResponse(
 		meta={},
-		data=order
+		data=updatedOrder
 	)
