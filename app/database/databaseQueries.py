@@ -8,7 +8,7 @@ from app.database.database import SQLiteAdapter, DatabaseAdapter
 from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
 from app.models.transactions import InternalOrder
-from app.models.users import PwdResetRequest
+from app.models.users import PwdResetRequest, PrivilegedUser
 
 listingBaseQuery = """
 SELECT
@@ -283,6 +283,23 @@ class Queries:
             """, (hashedId,))
 
 			return result
+
+		@staticmethod
+		def updateUser(conn, user: PrivilegedUser):
+			"""
+			Update a user in the database
+			"""
+			result = conn.execute("""
+			UPDATE users
+			SET username = ?, emailAddress = ?, firstName = ?, surname = ?,
+			profilePictureURL = ?, bannerURL = ?, description = ?,
+			addressLine1 = ?, addressLine2 = ?, city = ?, country = ?, postcode = ?
+			WHERE id = ?
+			""", (user.username, user.emailAddress, user.firstName, user.surname, user.profilePictureURL,
+				  user.bannerURL, user.description, user.addressLine1, user.addressLine2, user.city, user.country,
+				  user.postcode, user.id))
+
+
 
 	class Listings:
 		@staticmethod

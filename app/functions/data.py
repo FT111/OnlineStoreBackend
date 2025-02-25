@@ -107,7 +107,7 @@ class DataRepository:
 
 	def getUserByID(self, userID: str,
 					requestUser: Union[dict, None] = None,
-					includePrivileged: bool = False) -> Union[User, None]:
+					includePrivileged: bool = False) -> Union[User, PrivilegedUser, None]:
 		"""
 		Get a user by their ID
 
@@ -440,6 +440,17 @@ class DataRepository:
 		# stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})
 
 		return stats
+
+	def updateUser(self, user: PrivilegedUser):
+		"""
+		Update a user
+		:param user: User Pydantic model
+		:return:
+		"""
+
+		Queries.Users.updateUser(self.conn, user)
+
+		return user
 
 	def getAllConditions(self):
 		"""

@@ -6,12 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing_extensions import Union
 
 from app.functions.data import DataRepository
-from app.models.transactions import Basket, Response, EnrichedBasket, Order, OrderStatuses, SKUPurchase, InternalOrder
+from app.models.transactions import Basket, Response, EnrichedBasket, Order, OrderStatuses, SKUPurchase, InternalOrder, \
+	DeliveryDetails
 from .. import constants
 from ..database import database
 from ..functions.auth import userRequired
 from ..functions.transactions import paymentHandlerFactory, PaymentHandler
 from ..models.listings import SKUWithUser
+from ..models.users import PrivilegedUser
 
 router = APIRouter(prefix="/transactions", tags=["Transactions", "Sales"])
 
@@ -41,7 +43,7 @@ async def enrichBasket(
 @router.post('/checkout')
 def submitCheckout(
 		basket: EnrichedBasket,
-		deliveryDetails: dict,
+		deliveryDetails: DeliveryDetails,
 		paymentHandler: PaymentHandler = Depends(
 			paymentHandlerFactory
 		),
@@ -58,9 +60,6 @@ def submitCheckout(
 
 	data = DataRepository(database.db)
 
-	print(basket)
-	print(deliveryDetails)
-
 	# First – validate the basket
 	# Second – validate the delivery details
 	# Third – make the payment
@@ -68,7 +67,17 @@ def submitCheckout(
 	# Fifth – update the stock of the SKUs in listings
 
 	skus: list[SKUWithUser] = data.idsToSKUs(basket.items.keys(), SKUWithUser)
-	user = data.getUserByID(user['id'])
+	user: PrivilegedUser = data.getUserByID(user['id'],
+							requestUser=user,
+							includePrivileged=True)  # Fetch the user from the database to ensure the user is valid
+
+	if deliveryDetails.saveAddress is True:
+		user.addressLine1 = deliveryDetails.addressLine1
+		user.addressLine2 = deliveryDetails.addressLine2
+		user.city = deliveryDetails.city
+		user.postcode = deliveryDetails.postcode
+		user.country = deliveryDetails.country
+		data.updateUser(user)
 
 	purchaseID = str(uuid.uuid4())
 
@@ -137,17 +146,16 @@ def updateOrder(
 	"""
 
 	data = DataRepository(database.db)
+	existingOrder = data.getOrderByID(orderID)
 
-	order = data.getOrderByID(orderID)
-
-	if not order:
+	if not existingOrder:
 		raise HTTPException(404, f"Order {orderID} not found")
 
-	if order.seller.id != user['id']:
-		if updatedOrder.status != OrderStatuses.CANCELLED or order.recipient.id != user['id']:
+	if existingOrder.seller.id != user['id']:
+		if updatedOrder.status != OrderStatuses.CANCELLED or existingOrder.recipient.id != user['id']:
 			raise HTTPException(403, "You do not have permission to update this order")
 
-	if order.status == OrderStatuses.CANCELLED:
+	if existingOrder.status == OrderStatuses.CANCELLED:
 		raise HTTPException(409, "Order is cancelled and cannot be updated")
 
 	data.updateOrderStatus(orderID, updatedOrder.status)
