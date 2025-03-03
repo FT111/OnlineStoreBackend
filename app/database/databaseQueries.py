@@ -7,7 +7,7 @@ from typing_extensions import List, Union, Optional
 from app.database.database import SQLiteAdapter, DatabaseAdapter
 from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
-from app.models.transactions import InternalOrder
+from app.models.transactions import InternalOrder, InternalPurchase
 from app.models.users import PwdResetRequest, PrivilegedUser
 
 listingBaseQuery = """
@@ -139,10 +139,11 @@ json_group_array(
 {selection}
 FROM orders Ord
 LEFT JOIN orderSkus OS ON Ord.id = OS.orderID
+LEFT JOIN purchases Pur ON Ord.purchaseID = Pur.id
 LEFT JOIN skus Sk ON OS.skuID = Sk.id
 LEFT JOIN listings Li ON Sk.listingID = Li.id
 LEFT JOIN users OwUs ON OwUs.id = Li.ownerID
-LEFT JOIN users ReUs ON ReUs.id = Ord.userID
+LEFT JOIN users ReUs ON ReUs.id = Pur.userID
 {condition}
 GROUP BY Ord.id
 """
@@ -620,6 +621,20 @@ class Queries:
 			pass
 
 		@staticmethod
+		def addPurchase(conn, purchase: InternalPurchase):
+			"""
+			Add a purchase to the database
+			"""
+
+			result = conn.execute("""
+			INSERT INTO purchases (id, addressLine1, addressLine2, city, country, postcode, userID, addedAt)
+			VALUES (?,?,?,?,?,?,?,?)
+			""", (purchase.id, purchase.deliveryDetails.addressLine1, purchase.deliveryDetails.addressLine2,
+				  purchase.deliveryDetails.city, purchase.deliveryDetails.country,
+				  purchase.deliveryDetails.postcode, purchase.user.id, purchase.addedAt))
+
+
+		@staticmethod
 		def addOrder(conn, order: InternalOrder):
 			"""
 			Add an order to the database
@@ -658,11 +673,11 @@ class Queries:
 						'firstName', ReUs.firstName,
 						'surname', ReUs.surname,
 						'description', ReUs.description,
-						'addressLine1', ReUs.addressLine1,
-						'addressLine2', ReUs.addressLine2,
-						'city', ReUs.city,
-						'country', ReUs.country,
-						'postcode', ReUs.postcode,
+						'addressLine1', Pur.addressLine1,
+						'addressLine2', Pur.addressLine2,
+						'city', Pur.city,
+						'country', Pur.country,
+						'postcode', Pur.postcode,
 						'emailAddress', ReUs.emailAddress,
 						'joinedAt', ReUs.joinedAt
 					) AS recipient
@@ -741,10 +756,11 @@ class Queries:
 			
 			FROM orders Ord
 			LEFT JOIN orderSkus OS ON Ord.id = OS.orderID
+			LEFT JOIN purchases Pur ON Ord.purchaseID = Pur.id
 			LEFT JOIN skus Sk ON OS.skuID = Sk.id
 			LEFT JOIN listings Li ON Sk.listingID = Li.id
 			LEFT JOIN users Us ON Us.id = Li.ownerID
-			LEFT JOIN users ReUS ON ReUS.id = Ord.userID
+			LEFT JOIN users ReUS ON ReUS.id = Pur.userID
 			WHERE Ord.id = ?
 			GROUP BY Ord.id
 			""", (orderID,))

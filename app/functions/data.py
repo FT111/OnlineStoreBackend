@@ -16,7 +16,7 @@ from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU, SKUWithUser, ShortListing
-from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase
+from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase, InternalPurchase
 from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
 
@@ -642,4 +642,13 @@ class DataRepository:
 
 		updateTime = int(time.time())
 		Queries.Transactions.updateOrderStatus(self.conn, orderID, status, updateTime)
+
+	def addPurchase(self, purchase: InternalPurchase):
+		"""
+		Add a purchase to the database
+		:param purchase:
+		:return:
+		"""
+
+		Queries.Transactions.addPurchase(self.conn, purchase)
 

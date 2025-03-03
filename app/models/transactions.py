@@ -74,6 +74,28 @@ class CardPaymentDetails(PaymentDetails):
 		return 'card'
 
 
+class DeliveryDetails(BaseModel):
+	"""
+	Details for delivery
+	"""
+	addressLine1: str = Field(description='The first line of the address')
+	addressLine2: Optional[str] = Field(description='The second line of the address')
+	city: str = Field(description='The city')
+	postcode: str = Field(description='The postcode')
+	country: str = Field(description='The country')
+	saveAddress: Optional[bool] = Field(None, description='Whether to save the address for future use')
+
+	@field_validator('postcode')
+	def validatePostcode(cls, value):
+		if len(value) < 1:
+			raise ValueError('Postcode must not be empty')
+
+		if len(value) < 5 or len(value) > 7:
+			raise ValueError('Postcode must be between 5 and 7 characters')
+
+		return value
+
+
 @dataclasses.dataclass
 class SKUPurchase:
 	"""
@@ -108,6 +130,18 @@ class InternalCheckout:
 	payment: Union[
 		CardPaymentDetails
 	]
+
+
+@dataclasses.dataclass
+class InternalPurchase:
+	"""
+	A parent purchase
+	"""
+
+	id: str
+	user: PrivilegedUser
+	deliveryDetails: DeliveryDetails
+	addedAt: int
 
 
 class OrderStatuses(str, Enum):

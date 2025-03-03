@@ -7,7 +7,7 @@ from typing_extensions import Union
 
 from app.functions.data import DataRepository
 from app.models.transactions import Basket, Response, EnrichedBasket, Order, OrderStatuses, SKUPurchase, InternalOrder, \
-	DeliveryDetails
+	DeliveryDetails, InternalPurchase
 from .. import constants
 from ..database import database
 from ..functions.auth import userRequired
@@ -70,6 +70,13 @@ def submitCheckout(
 	user: PrivilegedUser = data.getUserByID(user['id'],
 							requestUser=user,
 							includePrivileged=True)  # Fetch the user from the database to ensure the user is valid
+	purchaseID = str(uuid.uuid4())
+	purchase = InternalPurchase(
+		id=purchaseID,
+		user=user,
+		deliveryDetails=deliveryDetails,
+		addedAt=int(time.time())
+	)
 
 	if deliveryDetails.saveAddress is True:
 		user.addressLine1 = deliveryDetails.addressLine1
@@ -79,7 +86,6 @@ def submitCheckout(
 		user.country = deliveryDetails.country
 		data.updateUser(user)
 
-	purchaseID = str(uuid.uuid4())
 
 	totalValue = 0
 	ordersPerSeller = defaultdict(list)
@@ -99,6 +105,8 @@ def submitCheckout(
 		))
 
 	paymentHandler.makePayment(totalValue, constants.EBUY_IBAN)
+
+	data.addPurchase(purchase)
 
 	# Add the orders to the database
 	orders = []

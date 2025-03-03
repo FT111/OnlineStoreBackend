@@ -1,5 +1,5 @@
+import time
 from abc import ABC, abstractmethod
-from enum import Enum
 
 from fastapi import HTTPException
 from typing_extensions import Union
@@ -8,10 +8,6 @@ from app.models.transactions import CardPaymentDetails
 
 
 class PaymentMethods:
-	# Possible payment string representations, used to determine the payment method from the user
-	class Types(str, Enum):
-		CARD = "card"
-
 	class PaymentStrategy(ABC):
 		@abstractmethod
 		def __init__(self):
@@ -21,17 +17,21 @@ class PaymentMethods:
 		def pay(self, value: int, recipient: Union[str, int]) -> Union[bool, HTTPException]:
 			pass
 
-	class CardPayment(PaymentStrategy):
+	class MockCardPayment(PaymentStrategy):
 		def __init__(self, details: CardPaymentDetails):
 			self.details = details
 
 		def pay(self, value: int, recipient):
-			# Do card payment
+			# Mock payment method
+
+			# Code here would realistically interact with a payment processor
+
+			time.sleep(1)
 			return True
 
 	# Dictionary of payment methods and their implementations
 	paymentStrategies = {
-		Types.CARD: CardPayment
+		'card': MockCardPayment
 	}
 
 
@@ -44,7 +44,7 @@ class PaymentHandler:
 	def __init__(self, paymentMethod: PaymentMethods.PaymentStrategy):
 		self.paymentMethod = paymentMethod
 
-	def makePayment(self, value: int, recipientIdentifier: Union[str, int]) -> Union[bool, HTTPException]:
+	def makePayment(self, value: int, recipientIdentifier: Union[str, int, dict]) -> Union[bool, HTTPException]:
 		"""
 		Make a payment using the selected payment method
 		:param value: Value of the payment in pence (GBP)
@@ -66,11 +66,11 @@ def paymentHandlerFactory(paymentDetails: Union[
 	:return: A payment handler instance
 	"""
 
-	# Determine the payment method form the details given.
+	# Creates an instance of the payment method from the details given
 	# Selects the method's strategy from the paymentStrategies dictionary
 	# The __repr__ gets the type of the given payment details as a string
 	paymentMethod = PaymentMethods.paymentStrategies[paymentDetails.__repr__()](
-		paymentDetails
+		paymentDetails # Passes the payment details to the payment method
 	)
 
 	if not paymentMethod:
