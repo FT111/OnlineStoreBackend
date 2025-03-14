@@ -73,6 +73,33 @@ class CardPaymentDetails(PaymentDetails):
 	def __repr__(self):
 		return 'card'
 
+	@field_validator('cardNumber')
+	def validateCardNumber(cls, value):
+		"""
+		Validate the card number
+		Checks through Luhn and length
+		:param value:
+		:return:
+		"""
+
+		if len(value) < 16 or len(value) > 19:
+			raise ValueError('Card number must be between 16 and 19 characters')
+
+		# Luhn algorithm
+		checksum = 0
+		# Loop through in reverse
+		for i, digit in enumerate(value[::-1]):
+			if i % 2 == 0:
+				checksum += int(digit)
+			else:
+				checksum += sum([int(x) for x in str(int(digit) * 2)])
+
+		# Error if the checksum is not a multiple of ten
+		if checksum % 10 != 0:
+			raise ValueError('Invalid card number')
+
+		return value
+
 
 class DeliveryDetails(BaseModel):
 	"""
@@ -83,7 +110,7 @@ class DeliveryDetails(BaseModel):
 	city: str = Field(description='The city')
 	postcode: str = Field(description='The postcode')
 	country: str = Field(description='The country')
-	saveAddress: Optional[bool] = Field(None, description='Whether to save the address for future use')
+	saveAddress: Optional[bool] = Field(False, description='Whether to save the address for future use')
 
 	@field_validator('postcode')
 	def validatePostcode(cls, value):
@@ -105,31 +132,6 @@ class SKUPurchase:
 	listing: Optional[ShortListing]
 	quantity: int
 	value: int
-
-
-class Checkout(BaseModel):
-	"""
-	A full purchase
-	"""
-
-	basket: EnrichedBasket = Field(description='The basket to purchase')
-	user: PrivilegedUser = Field(description='The user making the purchase')
-	payment: Union[
-		CardPaymentDetails
-	] = Field(description='The payment method')
-
-
-@dataclasses.dataclass
-class InternalCheckout:
-	"""
-	A full purchase
-	"""
-
-	basket: EnrichedBasket
-	user: PrivilegedUser
-	payment: Union[
-		CardPaymentDetails
-	]
 
 
 @dataclasses.dataclass
