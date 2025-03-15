@@ -121,7 +121,7 @@ class DataRepository:
 
 		user = Queries.Users.getUserByID(self.conn, userID)
 
-		if not dict(user):
+		if not user:
 			return None
 
 		user = dict(user)
@@ -135,7 +135,7 @@ class DataRepository:
 				   user: PrivilegedUser):
 		"""
 		Adds a user to the database
-		:param user: User Pydantic model, assumed to be valid
+		:param user: User Pydantic model, already validated
 		:return:
 		"""
 
@@ -600,7 +600,7 @@ class DataRepository:
 
 		return orders
 
-	def getOrderByID(self, orderID):
+	def getOrderByID(self, orderID) -> Order:
 		"""
 		Get an order by its ID
 		:param orderID:

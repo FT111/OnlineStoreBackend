@@ -3,6 +3,7 @@ import uuid
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.requests import Request
 from typing_extensions import Union
 
 from app.functions.data import DataRepository
@@ -12,6 +13,8 @@ from .. import constants
 from ..database import database
 from ..functions.auth import userRequired
 from ..functions.transactions import paymentHandlerFactory, PaymentHandler
+from ..instances import emailService, rateLimiter
+from ..models.emails import Templates
 from ..models.listings import SKUWithUser
 from ..models.users import PrivilegedUser
 
@@ -138,15 +141,18 @@ def submitCheckout(
 	)
 
 
+@rateLimiter.limit("1/minute")
 @router.put('/{orderID}', response_model=Response.OrderResponse)
 def updateOrder(
 		orderID: str,
 		updatedOrder: Order,
-		user=Depends(userRequired)
+		user=Depends(userRequired),
+		request=Request,
 ):
 	"""
 	Update an order.
 	Recipients can update to CANCELLED, sellers can update to any status.
+	:param request: HTTP request object
 	:param orderID: The ID of the order to update
 	:param updatedOrder: The updated order
 	:param user: The user updating the order
@@ -160,6 +166,7 @@ def updateOrder(
 		raise HTTPException(404, f"Order {orderID} not found")
 
 	if existingOrder.seller.id != user['id']:
+		# The recipient can only cancel the order
 		if updatedOrder.status != OrderStatuses.CANCELLED or existingOrder.recipient.id != user['id']:
 			raise HTTPException(403, "You do not have permission to update this order")
 
@@ -167,6 +174,13 @@ def updateOrder(
 		raise HTTPException(409, "Order is cancelled and cannot be updated")
 
 	data.updateOrderStatus(orderID, updatedOrder.status)
+
+	existingOrder.status = updatedOrder.status
+	emailService.sendEmailTemplate(
+		**dict(existingOrder),
+		template=Templates.OrderUpdateEmail(),
+		recipientAddress=existingOrder.recipient.emailAddress,
+	)
 
 	return Response.OrderResponse(
 		meta={},

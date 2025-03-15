@@ -1,3 +1,4 @@
+import datetime as dt
 from abc import ABC, abstractmethod
 
 
@@ -35,3 +36,17 @@ class Templates:
 
 		def getPlainText(self):
 			return "Welcome to eBuy!\n\nThank you for joining our platform!"
+
+	class OrderUpdateEmail(EmailTemplate):
+		def getSubject(self, **kwargs):
+			return f"Order Update: {kwargs['id']}"
+
+		def getBody(self, **kwargs):
+			return (f"<h1>Order Update</h1><br /><p>Your order placed on {dt.datetime.fromtimestamp(kwargs['addedAt'])
+					.strftime('%A %w %B')}, sold by "
+					f"{kwargs['seller'].username}, is now <strong>{kwargs['status'].value}</strong></p><br />"
+					f"Your order consists of:<br /><ul>"
+					f"{', '.join([f'<li>{item.quantity}x {item.listing.title}</li>' for item in kwargs['skus']])}")
+
+		def getPlainText(self, **kwargs):
+			return f"Order Update\n\nYour order {kwargs['id']} has been updated to {kwargs['status'].lower()}"
