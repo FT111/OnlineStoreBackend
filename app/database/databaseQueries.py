@@ -202,7 +202,7 @@ class Queries:
 			cursor.execute("""
             INSERT INTO users (id, emailAddress, username, firstName, surname, passwordHash, passwordSalt, joinedAt)
             VALUES (?,?,?,?,?,?,?,?)
-            """, (user['id'], user['email'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
+            """, (user['id'], user['emailAddress'], user['username'], user['firstName'], user['surname'], user['passwordHash'],
 				  user['passwordSalt'], user['joinedAt'],))
 
 		@staticmethod

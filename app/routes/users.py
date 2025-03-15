@@ -97,7 +97,7 @@ async def newUser(
 	data = DataRepository(database.db)
 
 	user = data.createUser(user)
-	token = generateToken(user.id, user.email)
+	token = generateToken(user.id, user.emailAddress)
 
 	return AuthResponse.Token(meta={}, data=Token(token=token))
 

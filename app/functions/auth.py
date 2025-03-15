@@ -37,7 +37,8 @@ def validateToken(token: str) -> Union[dict, bool]:
 	try:
 		payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
 		return payload
-	except joseExceptions.JWTError:
+	except joseExceptions.JWTError as e:
+		print(e)
 		return False
 
 
@@ -57,6 +58,8 @@ def authenticateUser(conn, email: str, password: str):
 		return False
 
 	hashedPassword = user['passwordHash']
+	if type(hashedPassword) is str:
+		hashedPassword = hashedPassword.encode('utf-8')
 
 	# Validates given credentials. Uses bcrypt checkpw to avoid timing attacks
 	if bcrypt.checkpw(password.encode('utf-8'), hashedPassword):
