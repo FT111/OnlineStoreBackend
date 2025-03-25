@@ -425,7 +425,7 @@ class DataRepository:
 
 		return events
 
-	def getUserStatistics(self, user: User, start: str, end: str) -> list:
+	def getUserStatistics(self, user: User, start: str, end: str) -> dict:
 		"""
 		Get a user's statistics between two dates
 		:param user: User dict
@@ -434,7 +434,8 @@ class DataRepository:
 		:return:
 		"""
 
-		stats = [dict(row) for row in Queries.Users.getUserStatistics(self.conn, user['id'], start, end)]
+		stats = {row['eventType']: {'count': row['count'], 'events': json.loads(row['events'])}
+				 for row in Queries.Users.getUserStatistics(self.conn, user['id'], start, end)}
 		# clicks = [row['count'] for row in stats if row['eventType'] == 'click'][0]
 		# impressions = [row['count'] for row in stats if row['eventType'] == 'impression'][0]
 		# stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})

@@ -192,20 +192,57 @@ def getUserOrders(
 
 
 @router.get('/{userID}/updates')
-def getUserStatistics(user=Depends(userRequired)) -> StreamingResponse:
+def getUserUpdates(user=Depends(userRequired)) -> StreamingResponse:
 	"""
 	Get a user's statistics
 	:param user: The user to get statistics for
 	:return: A stream of the user's statistics
 	"""
 	data = DataRepository(database.db)
-	endDate = timedelta(weeks=4)
-	startDate = datetime.now() - endDate
 
 	def generateStatistics():
+
+		previousSales = None
 		while True:
-			yield f'event: userStatsUpdate\ndata: {data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'),
-																		  datetime.now().strftime('%Y-%m-%d'))}\n\n'
-			time.sleep(4)
+			endDate = timedelta(weeks=4)
+			startDate = datetime.now() - endDate
+			stats: dict = data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d'))
+			print(stats['sale'])
+			if stats.get('sale'):
+				if stats['sale']['count'] != previousSales:
+					if previousSales:
+						yield f'event: sale\ndata: {stats['sale']['count'] - previousSales}\n\n'
+
+					previousSales = stats['sale']['count']
+
+			yield f'event: userStatsUpdate\ndata: {stats}\n\n'
+			time.sleep(5)
 
 	return StreamingResponse(generateStatistics(), media_type='text/event-stream')
+
+
+@router.get('/me/statistics/{fromDate}/{toDate}')
+def getUserStatistics(
+		fromDate: str,
+		toDate: str,
+		user=Depends(userRequired),
+):
+	"""
+	Get a user's statistics over a given period
+	:param user: The user to get statistics for
+	:param userID: The user's id
+	:param fromDate: The start date for the statistics
+	:param toDate: The end date for the statistics
+	"""
+	data = DataRepository(database.db)
+
+	# Validate the dates
+	try:
+		datetime.strptime(fromDate, '%Y-%m-%d')
+		datetime.strptime(toDate, '%Y-%m-%d')
+	except ValueError:
+		raise HTTPException(status_code=400, detail="Invalid date format")
+
+	stats: dict = data.getUserStatistics(user, fromDate, toDate)
+
+	return {'data': stats}
