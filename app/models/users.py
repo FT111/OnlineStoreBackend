@@ -31,7 +31,7 @@ class User(BaseModel):
 												description="The URL of the user's profile picture")
 	bannerURL: Union[str, None] = Field(None, title="Banner URL", description="The URL of the user's banner")
 	description: Union[str, None] = Field(None, title="Bio", description="The description of the user", max_length=100)
-	joinedAt: int = Field(time.time(), title="Joined At", description="The date the user joined")
+	joinedAt: int = Field(int(time.time()), title="Joined At", description="The date the user joined")
 
 
 class UserDetail(User):
@@ -39,6 +39,7 @@ class UserDetail(User):
 	User's content, inherits from User.
 	"""
 	listingIDs: Union[list, None] = Field(None, title="Listings", description="The listings of the user")
+	sales: int = Field(0, title="Sales", description="The sales of the user")
 
 
 class PrivilegedUser(UserDetail):

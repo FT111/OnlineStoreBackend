@@ -163,6 +163,12 @@ class Listing(BaseModel):
 			raise ValueError('Title must be between 1 and 40 characters')
 		return value
 
+	@field_validator("description")
+	def validate_description(cls, value):
+		if len(value) > 100:
+			raise ValueError('Description must be less than 100 characters')
+		return value
+
 	@field_validator("totalStock")
 	def returnDefaultIfNone(cls, value):
 		return value or 0

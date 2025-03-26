@@ -102,7 +102,7 @@ async def newUser(
 	return AuthResponse.Token(meta={}, data=Token(token=token))
 
 
-@router.get('/{userID}', response_model=UserResponse.User)
+@router.get('/{userID}')
 async def getUser(
 		userID: str,
 		includePrivileged: bool = False,
@@ -129,7 +129,7 @@ async def getUser(
 		raise HTTPException(status_code=404, detail="User not found")
 
 	# Return the user in standard format
-	return UserResponse.User(meta={}, data=user)
+	return {'meta': {}, 'data': user}
 
 
 @router.get('/{userID}/listings', response_model=ListingResponses.Listings)

@@ -146,6 +146,7 @@ LEFT JOIN users OwUs ON OwUs.id = Li.ownerID
 LEFT JOIN users ReUs ON ReUs.id = Pur.userID
 {condition}
 GROUP BY Ord.id
+ORDER BY Ord.addedAt DESC
 """
 
 
@@ -171,19 +172,23 @@ class Queries:
 			Get a user by their ID
 			"""
 			query = """
-                SELECT id, username, emailAddress, firstName, surname, 
-                profilePictureURL, bannerURL, description, joinedAt,
+                SELECT Us.id, username, emailAddress, firstName, surname, 
+                profilePictureURL, bannerURL, Us.description, joinedAt,
                 addressLine1, addressLine2, city, country, postcode,
-                    (
-                        SELECT json_group_array(
-                               Li.id
-                                )
-                                FROM listings Li
-                                WHERE Li.ownerID = Us.id
-                    ) AS listingIDs
+				(
+					SELECT json_group_array(
+						   Li.id
+							)
+							FROM listings Li
+							WHERE Li.ownerID = Us.id
+				) AS listingIDs,
+				COUNT(OS.orderID) AS sales
                 
                 FROM users Us
-                WHERE id = ?"""
+                LEFT JOIN  listings Li ON Li.ownerID = Us.id
+                LEFT JOIN skus Sk ON Sk.listingID = Li.id
+                LEFT JOIN orderSkus OS ON OS.skuID = Sk.id
+                WHERE Us.id = ?"""
 
 			result = cursor.execute(query, (userID,))
 			user = result[0] if result else None
@@ -222,7 +227,8 @@ class Queries:
 			"""
 			result = cursor.execute("""
             SELECT eventType,
-            json_group_array(json_object('date', date, 'count', count)) as events
+            json_group_array(json_object('date', date, 'count', count)) as events,
+            SUM(count) as count
             FROM listingEventsByDay
             WHERE ownerID = ?
             AND date BETWEEN ? AND ?
@@ -610,6 +616,19 @@ class Queries:
 			SET stock = ?
 			WHERE id = ?
 			""", (stock, id))
+
+		@staticmethod
+		def addListingReview(conn, listingID, Review):
+			"""
+			Add a review to a listing
+			"""
+
+			result = conn.execute("""
+			INSERT INTO listingReviews (listingID, rating, review, addedAt)
+			VALUES (?,?,?,?)
+			""", (listingID, rating, review, int(time.time())))
+
+			return result
 
 	class Transactions:
 		@staticmethod
