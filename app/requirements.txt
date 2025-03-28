@@ -1,6 +1,8 @@
 pydantic
 fastapi
 uvicorn
-sqlite3
 cachelib
+fastapi[standard]
+bcrypt
 slowapi
+python-jose
