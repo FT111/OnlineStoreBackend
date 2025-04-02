@@ -8,7 +8,8 @@ from app.functions.data import DataRepository
 from ..database import database
 from ..functions.auth import userRequired, userOptional, verifyListingOwnership
 from ..models.categories import Category
-from ..models.listings import Listing, ListingSubmission, ListingWithSKUs, SKUWithStock, SKUSubmission
+from ..models.listings import Listing, ListingSubmission, ListingWithSKUs, SKUWithStock, SKUSubmission, \
+	ListingReviewSubmission
 from ..models.listings import Response as ListingResponses
 from ..models.users import User
 
@@ -153,3 +154,33 @@ async def createSKU(sku: SKUSubmission,
 
 	return ListingResponses.SKU(meta={"id": createdSKU.id},
 								data=createdSKU)
+
+
+@router.post("/{listingID}/reviews")
+def createListingReview(listingID: str, review: ListingReviewSubmission,
+				 user=Depends(userRequired)):
+	"""
+	Create a review for a listing.
+	:param user: The user creating the review
+	:param listingID:
+	:param review: The review object to create
+	:return:
+	"""
+	data = DataRepository(database.db)
+
+	data.addReview(review, user['id'])
+
+
+@router.get('/{listingID}/reviews')
+def getListingReviews(listingID: str):
+	"""
+	Get all reviews for a listing
+	:param listingID:
+	:return:
+	"""
+
+	data = DataRepository(database.db)
+
+	reviews = data.getListingReviews(listingID)
+
+	return ListingResponses.Reviews(meta={}, data=reviews)

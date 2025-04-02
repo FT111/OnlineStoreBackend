@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import time
 from collections import defaultdict
 
 from typing_extensions import List, Union, Optional
@@ -618,17 +619,38 @@ class Queries:
 			""", (stock, id))
 
 		@staticmethod
-		def addListingReview(conn, listingID, Review):
+		def addListingReview(conn, review, reviewID, userID):
 			"""
 			Add a review to a listing
 			"""
 
 			result = conn.execute("""
-			INSERT INTO listingReviews (listingID, rating, review, addedAt)
-			VALUES (?,?,?,?)
-			""", (listingID, rating, review, int(time.time())))
+			INSERT INTO listingReviews (id, listingID, rating, description, userID, addedAt)
+			VALUES (?,?,?,?,?,?)
+			""", (reviewID, review.listingID, review.rating, review.description, userID, int(time.time())))
 
 			return result
+
+		@staticmethod
+		def getListingReviews(conn, listingID):
+			"""
+			Get all reviews for a listing
+			"""
+
+			return conn.execute("""
+			SELECT lRev.id, lRev.rating, lRev.description, lRev.userID, lRev.addedAt,
+			json_object(
+				'id', Us.id,
+				'username', Us.username,
+				'bannerURL', Us.bannerURL,
+				'description', Us.description,
+				'profilePictureURL', Us.profilePictureURL,
+				'joinedAt', Us.joinedAt
+			) AS user
+			FROM listingReviews lRev
+			LEFT JOIN users Us ON Us.id = userID
+			WHERE listingID = ?
+			""", (listingID,))
 
 	class Transactions:
 		@staticmethod

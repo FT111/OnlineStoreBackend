@@ -228,6 +228,30 @@ class ListingSubmission(BaseModel):
 		return value
 
 
+class ListingReviewSubmission(BaseModel):
+	listingID: str = Field(..., title="Listing ID", description="The ID of the listing being reviewed")
+	description: str = Field(..., title="Review Text", description="The optional description of the review")
+	rating: int = Field(..., title="Review Rating", description="The rating of the review")
+
+	@field_validator("rating")
+	def validate_rating(cls, value):
+		if value < 1 or value > 5:
+			raise ValueError('Rating must be between 1 and 5')
+
+		if not isinstance(value, int):
+			raise ValueError('Rating must be an integer')
+		return value
+
+
+class ListingReview(ListingReviewSubmission):
+	"""
+	Contains a complete listing review, including the user who reviewed it
+	"""
+	user: User = Field(..., title="User", description="The user who reviewed the listing")
+	addedAt: int = Field(..., title="Added At", description="The seconds-epoch the review was added")
+
+
+
 class Response:
 	"""
 	REST API Response Models for Listings
@@ -274,5 +298,11 @@ class Response:
 	class Conditions(ResponseSchema[ListingMeta, List[str]]):
 		"""
 		Response Model - Conditions
+		"""
+		pass
+
+	class Reviews(ResponseSchema[ListingMeta, List[ListingReview]]):
+		"""
+		Response Model - Reviews
 		"""
 		pass

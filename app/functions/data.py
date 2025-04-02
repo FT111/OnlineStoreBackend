@@ -15,7 +15,7 @@ from app.functions import auth
 from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
-	SKUSubmission, SKU, SKUWithUser, ShortListing
+	SKUSubmission, SKU, SKUWithUser, ShortListing, ListingReview, ListingReviewSubmission
 from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase, InternalPurchase
 from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
 
@@ -653,3 +653,43 @@ class DataRepository:
 
 		Queries.Transactions.addPurchase(self.conn, purchase)
 
+	def addReview(self, review: ListingReviewSubmission, userID: str):
+		"""
+		Add a review to the database
+		:param userID:
+		:param review:
+		:return:
+		"""
+
+		userListings = Queries.Listings.getListingsByUserID(self.conn, userID, includePrivileged=True)
+		if review.listingID in [listing['id'] for listing in userListings]:
+			raise HTTPException(status_code=403, detail="You cannot review your own listing")
+
+		if not Queries.Listings.getListingByID(self.conn, review.listingID):
+			raise HTTPException(status_code=404, detail="Listing not found")
+
+		for review in Queries.Listings.getListingReviews(self.conn, review.listingID):
+			if review['userID'] == userID:
+				raise HTTPException(status_code=409, detail="You have already reviewed this listing")
+
+		reviewID = str(uuid4())
+
+		Queries.Listings.addListingReview(self.conn, review, reviewID, userID)
+
+	def getListingReviews(self, listingID) -> List[ListingReview]:
+		"""
+		Get all reviews for a listing
+		:param listingID:
+		:return:
+		"""
+
+		reviews = Queries.Listings.getListingReviews(self.conn, listingID)
+		castedReviews = []
+		for review in reviews:
+			castedReviews.append(dict(review))
+			castedObj = castedReviews[len(castedReviews)-1]
+			castedObj['user'] = json.loads(review['user'])
+			castedObj['listingID'] = listingID
+			castedReviews[len(castedReviews)-1] = ListingReview(**castedReviews[len(castedReviews)-1])
+
+		return castedReviews
