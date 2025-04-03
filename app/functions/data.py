@@ -12,6 +12,7 @@ from typing_extensions import Optional, Type
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
+from app.functions.utils import dateRangeGenerator
 from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
@@ -434,8 +435,23 @@ class DataRepository:
 		:return:
 		"""
 
-		stats = {row['eventType']: {'count': row['count'], 'events': json.loads(row['events'])}
+		statsWithoutEmptyDates = {row['eventType']: {'count': row['count'], 'events': json.loads(row['events'])}
 				 for row in Queries.Users.getUserStatistics(self.conn, user['id'], start, end)}
+		stats = {}
+
+		for eventType in statsWithoutEmptyDates:
+			filledEvents = []
+			for date in dateRangeGenerator(start, end):
+				for event in [event for event in statsWithoutEmptyDates[eventType]['events'] if event['date'] == date]:
+					filledEvents.append(event)
+					break
+				else:
+					filledEvents.append({'date': date, 'count': 0})
+
+			stats[eventType] = {
+				'count': statsWithoutEmptyDates[eventType]['count'],
+				'events': filledEvents
+			}
 		# clicks = [row['count'] for row in stats if row['eventType'] == 'click'][0]
 		# impressions = [row['count'] for row in stats if row['eventType'] == 'impression'][0]
 		# stats.append({'eventType': 'clickThroughRate', 'value': clicks/impressions})

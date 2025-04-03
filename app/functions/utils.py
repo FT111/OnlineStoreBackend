@@ -1,6 +1,7 @@
 """
 This file contains utility functions that are used in the application.
 """
+import datetime
 
 
 def quickSort(listObj: list, key=lambda x: x, reverse=False) -> list:
@@ -24,3 +25,17 @@ def quickSort(listObj: list, key=lambda x: x, reverse=False) -> list:
 		return quickSort(right, key, reverse) + middle + quickSort(left, key, reverse)
 	else:
 		return quickSort(left, key, reverse) + middle + quickSort(right, key, reverse)
+
+
+def dateRangeGenerator(startDate: str, endDate: str):
+	"""
+	Generates a range of dates between two ISO dates.
+	:param startDate: The start date.
+	:param endDate: The end date.
+	"""
+
+	startDate, endDate = datetime.datetime.fromisoformat(startDate), datetime.datetime.fromisoformat(endDate)
+	delta = datetime.timedelta(days=1)
+	while startDate <= endDate:
+		yield startDate.strftime('%Y-%m-%d')
+		startDate += delta
