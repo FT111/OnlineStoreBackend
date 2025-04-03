@@ -149,7 +149,7 @@ class Listing(BaseModel):
 	@field_validator("rating")
 	def validate_rating(cls, value):
 		assert 0 <= value <= 5, 'Rating must be between 0 and 5'
-		return value
+		return round(value, 1)
 
 	@field_validator("views")
 	def validate_views(cls, value):

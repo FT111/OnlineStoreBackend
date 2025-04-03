@@ -13,7 +13,7 @@ from app.models.users import PwdResetRequest, PrivilegedUser
 
 listingBaseQuery = """
 SELECT
-    Li.id, Li.title, Li.description, Li.addedAt, Li.rating, Li.public,
+    Li.id, Li.title, Li.description, Li.addedAt, Li.public,
     Ca.title AS category,
     sCa.title AS subCategory,
     Co.title AS condition,
@@ -90,6 +90,8 @@ SELECT
     END AS hasDiscount,
     
 	(SELECT sum(Sk.stock) FROM skus Sk WHERE Sk.listingID = Li.id) AS totalStock,
+	
+	coalesce(avg(lRev.rating), 0) AS rating,
     
     CASE
         WHEN count(Sk.id) > 1 THEN 1
@@ -104,6 +106,7 @@ SELECT
     AND Ev.eventType = 'click')
     AS clicks
 FROM listings Li
+LEFT JOIN listingReviews lRev ON lRev.listingID = Li.id
 LEFT JOIN subCategories sCa ON sCa.id = Li.subCategoryID
 LEFT JOIN categories Ca ON Ca.id = sCa.categoryID
 LEFT JOIN users Us ON Us.id = Li.ownerID
