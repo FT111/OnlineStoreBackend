@@ -247,7 +247,7 @@ class ListingReview(ListingReviewSubmission):
 	"""
 	Contains a complete listing review, including the user who reviewed it
 	"""
-	user: User = Field(..., title="User", description="The user who reviewed the listing")
+	reviewer: User = Field(..., title="User", description="The user who reviewed the listing")
 	addedAt: int = Field(..., title="Added At", description="The seconds-epoch the review was added")
 
 

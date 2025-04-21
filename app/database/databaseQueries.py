@@ -9,7 +9,7 @@ from app.database.database import SQLiteAdapter, DatabaseAdapter
 from app.models.analytics import Events
 from app.models.listings import Listing, SKUWithStock, ListingWithSKUs
 from app.models.transactions import InternalOrder, InternalPurchase
-from app.models.users import PwdResetRequest, PrivilegedUser
+from app.models.users import PwdResetRequest, PrivilegedUser, UserReviewSubmission
 
 listingBaseQuery = """
 SELECT
@@ -177,7 +177,7 @@ class Queries:
 			"""
 			query = """
                 SELECT Us.id, username, emailAddress, firstName, surname, 
-                profilePictureURL, bannerURL, Us.description, joinedAt,
+                profilePictureURL, balance, allTimeBalance, bannerURL, Us.description, joinedAt,
                 addressLine1, addressLine2, city, country, postcode,
 				(
 					SELECT json_group_array(
@@ -186,12 +186,13 @@ class Queries:
 							FROM listings Li
 							WHERE Li.ownerID = Us.id
 				) AS listingIDs,
-				COUNT(OS.orderID) AS sales
-                
+				COUNT(OS.orderID) AS sales,
+				coalesce(AVG(uRev.rating), 0) AS rating
                 FROM users Us
                 LEFT JOIN  listings Li ON Li.ownerID = Us.id
                 LEFT JOIN skus Sk ON Sk.listingID = Li.id
                 LEFT JOIN orderSkus OS ON OS.skuID = Sk.id
+                LEFT join userReviews uRev ON uRev.reviewedUserID = Us.id
                 WHERE Us.id = ?"""
 
 			result = cursor.execute(query, (userID,))
@@ -310,7 +311,41 @@ class Queries:
 				  user.bannerURL, user.description, user.addressLine1, user.addressLine2, user.city, user.country,
 				  user.postcode, user.id))
 
+		@staticmethod
+		def getUserReviews(conn, user):
+			"""
+			Get all reviews that a user is the recipient of
+			"""
 
+			return conn.execute("""
+			SELECT uRev.id, uRev.rating, uRev.description, uRev.addedAt,
+			json_object(
+				'id', Us.id,
+				'username', Us.username,
+				'bannerURL', Us.bannerURL,
+				'description', Us.description,
+				'profilePictureURL', Us.profilePictureURL,
+				'rating', (SELECT coalesce(AVG(rating),0) FROM userReviews WHERE reviewedUserID = Us.id),
+				'joinedAt', Us.joinedAt
+			) AS reviewer
+			FROM userReviews uRev
+			LEFT JOIN users Us ON Us.id = uRev.reviewerID
+			WHERE uRev.reviewedUserID = ?
+			""", (user.id,))
+
+		@staticmethod
+		def addUserReview(conn, review: UserReviewSubmission, reviewID,
+						  reviewerID: str, reviewedID: str):
+			"""
+			Add a review to a user
+			"""
+
+			result = conn.execute("""
+			INSERT INTO userReviews (id, reviewedUserID, reviewerID, rating, description, addedAt)
+			VALUES (?,?,?,?,?,?)
+			""", (reviewID, reviewedID, reviewerID, review.rating, review.description, int(time.time())))
+
+			return result
 
 	class Listings:
 		@staticmethod
@@ -826,6 +861,46 @@ class Queries:
 			SET status = ?, updatedAt = ?
 			WHERE id = ?
 			""", (status, updateTime, orderID))
+
+		@staticmethod
+		def addToUserBalance(conn, userID, amount):
+			"""
+			Add to a user's balance
+			:param conn:
+			:param userID:
+			:param amount: The amount in GBP pence to add to the user's balance
+			:return:
+			"""
+
+			return conn.execute("""
+			UPDATE users
+			SET balance = balance + ?,
+			allTimeBalance = allTimeBalance + ?
+			WHERE id = ?
+			""", (amount, amount, userID))
+
+		@staticmethod
+		def subtractFromUserBalance(conn, userID, amount, detractAllTime=False):
+			"""
+			Subtract from a user's balance
+			:param conn:
+			:param userID:
+			:param amount:
+			:param detractAllTime: Whether to detract from the all time balance as well. Use this for refunds
+			:return:
+			"""
+
+			args = [amount]
+			if detractAllTime:
+				args.append(amount)
+			args.append(userID,)
+
+			return conn.execute(f"""
+			UPDATE users
+			SET balance = balance - ?
+			{' , allTimeBalance = allTimeBalance - ?' if detractAllTime else ''}
+			WHERE id = ?
+			""", tuple(args))
 
 	class Analytics:
 		@staticmethod

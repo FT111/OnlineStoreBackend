@@ -1,4 +1,4 @@
-import base64
+import json
 import json
 import sqlite3
 import time
@@ -12,13 +12,14 @@ from typing_extensions import Optional, Type
 
 from app.database.databaseQueries import Queries
 from app.functions import auth
-from app.functions.utils import dateRangeGenerator
+from app.functions.utils import dateRangeGenerator, processAndStoreImagesFromBase64
 from app.models.analytics import Events
 from app.models.categories import Category
 from app.models.listings import Listing, ListingWithSales, ListingWithSKUs, ListingSubmission, SKUWithStock, \
 	SKUSubmission, SKU, SKUWithUser, ShortListing, ListingReview, ListingReviewSubmission
 from app.models.transactions import Basket, EnrichedBasket, UserOrders, Order, SKUPurchase, InternalPurchase
-from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission
+from app.models.users import User, PrivilegedUser, UserDetail, PwdResetRequest, PwdResetSubmission, UserReview, \
+	UserReviewSubmission
 
 
 class DataRepository:
@@ -125,10 +126,12 @@ class DataRepository:
 		if not user:
 			return None
 
-		user = dict(user)
-		user['listingIDs'] = json.loads(user['listingIDs'])
-
-		modelUser = PrivilegedUser(**user) if includePrivileged else UserDetail(**user)
+		try:
+			user = dict(user)
+			user['listingIDs'] = json.loads(user['listingIDs'])
+			modelUser = PrivilegedUser(**user) if includePrivileged else UserDetail(**user)
+		except pydantic.ValidationError:
+			return None
 
 		return modelUser
 
@@ -223,7 +226,7 @@ class DataRepository:
 		:return:
 		"""
 
-		sku.images = self.processAndStoreImages(sku.images, sku.id)
+		sku.images = processAndStoreImagesFromBase64(sku.images, sku.id, 'sku')
 
 		# Check if the SKU already exists with the same options - Must be unique
 		if len(sku.options) > 0:
@@ -246,36 +249,10 @@ class DataRepository:
 		"""
 
 		fullSKU = SKUWithStock(**dict(sku), id=str(uuid4()))
-		sku.images = self.processAndStoreImages(fullSKU.images, fullSKU.id)
+		sku.images = processAndStoreImagesFromBase64(fullSKU.images, fullSKU.id, 'sku')
 		Queries.Listings.addSKU(self.conn, fullSKU, listingID)
 
 		return fullSKU
-
-	@staticmethod
-	def processAndStoreImages(images: list, uniqueID) -> list:
-		# Save new images to the filesystem
-		for index, image in enumerate(images):
-			# If the image is a base64 string, save it to the filesystem
-			if image.startswith('data:image'):
-				# Remove the base64 header
-				image = image.split('base64,')[1]
-
-				# Save the image to the filesystem
-				filename = f"sku-{uniqueID}-{index + 1}.jpeg"
-				with open(f"app/static/listingImages/{filename}", 'wb') as file:
-					file.write(base64.decodebytes(image.encode('utf-8')))
-				images[index] = filename
-				continue
-
-			# If the image is an existing filepath, keep it
-			if image.startswith('sku-'):
-				continue
-
-			# Remove the image if it isn't a base64 string or filepath
-			print(f"Invalid image: {image}")
-			del images[index]
-
-		return images
 
 	@staticmethod
 	def formatListingRows(listings):
@@ -366,7 +343,7 @@ class DataRepository:
 
 		# Transform SKU ids to full SKU objects, from the listing
 		for skuID in basket.items:
-			basket.items[skuID]['sku'] = [sku for sku in listingDict[skuID]['skus'] if sku.id == skuID][0]
+			basket.items.get(skuID, None)['sku'] = [sku for sku in listingDict.get(skuID, None)['skus'] if sku.id == skuID][0]
 
 		# Convert to EnrichedBasket model
 		enrichedBasket = EnrichedBasket(
@@ -465,6 +442,11 @@ class DataRepository:
 		:return:
 		"""
 
+		if user.profilePictureURL: user.profilePictureURL = processAndStoreImagesFromBase64(user.profilePictureURL, user.id,
+																							'profile', 'user-profiles')
+		if user.bannerURL: user.bannerURL = processAndStoreImagesFromBase64(user.bannerURL, user.id,
+																			'banner', 'user-profiles')
+
 		Queries.Users.updateUser(self.conn, user)
 
 		return user
@@ -558,6 +540,7 @@ class DataRepository:
 		"""
 
 		Queries.Transactions.addOrder(self.conn, order)
+		Queries.Transactions.addToUserBalance(self.conn, order.seller.id, order.value)
 
 	def updateSKUStock(self, id, stock):
 		"""
@@ -649,16 +632,20 @@ class DataRepository:
 
 		return order
 
-	def updateOrderStatus(self, orderID, status):
+	def updateOrderStatus(self, order, status):
 		"""
-		Update an order's status
-		:param orderID:
+		Update an order's status and subtract from the seller's balance if cancelled
+		:param order: Order object
 		:param status:
 		:return:
 		"""
 
 		updateTime = int(time.time())
-		Queries.Transactions.updateOrderStatus(self.conn, orderID, status, updateTime)
+		Queries.Transactions.updateOrderStatus(self.conn, order.id, status, updateTime)
+
+		if status == 'CANCELLED':
+			# 		Remove the order from the user's balance
+			Queries.Transactions.subtractFromUserBalance(self.conn, order.seller.id, order.value, True)
 
 	def addPurchase(self, purchase: InternalPurchase):
 		"""
@@ -702,10 +689,52 @@ class DataRepository:
 		reviews = Queries.Listings.getListingReviews(self.conn, listingID)
 		castedReviews = []
 		for review in reviews:
-			castedReviews.append(dict(review))
-			castedObj = castedReviews[len(castedReviews)-1]
-			castedObj['user'] = json.loads(review['user'])
-			castedObj['listingID'] = listingID
-			castedReviews[len(castedReviews)-1] = ListingReview(**castedReviews[len(castedReviews)-1])
+			try:
+				castedReviews.append(dict(review))
+				castedObj = castedReviews[len(castedReviews)-1]
+				castedObj['reviewer'] = json.loads(review['user'])
+				castedObj['listingID'] = listingID
+				castedReviews[len(castedReviews)-1] = ListingReview(**castedReviews[len(castedReviews)-1])
+			except pydantic.ValidationError:
+				castedReviews.pop()
+				continue
 
 		return castedReviews
+
+	def getUserReviews(self, user: User) -> List[UserReview]:
+		"""
+		Get all reviews for a user
+		:param user:
+		:return:
+		"""
+
+		reviews = Queries.Users.getUserReviews(self.conn, user)
+		castedReviews = []
+		for review in reviews:
+			try:
+				castedReviews.append(dict(review))
+				castedObj = castedReviews[len(castedReviews)-1]
+				castedObj['reviewer'] = json.loads(review['reviewer'])
+				castedReviews[len(castedReviews)-1] = UserReview(**castedReviews[len(castedReviews)-1])
+			except pydantic.ValidationError:
+				castedReviews.pop()
+				continue
+
+		return castedReviews
+
+	def submitUserReview(self, review: UserReviewSubmission,
+						 reviewerID: str, reviewedID: str,
+						 ) -> None:
+		"""
+		Submit a review for a user
+		:param review:
+		:param reviewerID:
+		:param reviewedID:
+		:return: None or HTTP Exception
+		"""
+
+		if not Queries.Users.getUserByID(self.conn, reviewedID):
+			raise HTTPException(status_code=404, detail="User not found")
+
+		reviewID = str(uuid4())
+		return Queries.Users.addUserReview(self.conn, review, reviewID, reviewerID, reviewedID)

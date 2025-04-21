@@ -29,6 +29,7 @@ class User(BaseModel):
 	profileURL: Union[str, None] = Field(None, title="Profile URL", description="The URL of the user's profile")
 	profilePictureURL: Union[str, None] = Field(None, title="Profile Picture URL",
 												description="The URL of the user's profile picture")
+	rating: float = Field(0.0, title="Rating", description="The rating of the user")
 	bannerURL: Union[str, None] = Field(None, title="Banner URL", description="The URL of the user's banner")
 	description: Union[str, None] = Field(None, title="Bio", description="The description of the user", max_length=100)
 	joinedAt: int = Field(int(time.time()), title="Joined At", description="The date the user joined")
@@ -50,6 +51,9 @@ class PrivilegedUser(UserDetail):
 	firstName: str = Field(..., title="First Name", description="The first name of the user")
 	surname: str = Field(..., title="Surname", description="The user's surname")
 	emailAddress: EmailStr = Field(..., title="Email", description="The email of the user")
+	balance: int = Field(0, title="Balance", description="The balance of the user. Formatted in pence")
+	allTimeBalance: int = Field(0, title="All Time Balance",
+								description="The balance of the user before withdrawals. Formatted in pence. Still includes refunds.")
 	streetAddress: Union[str, None] = Field(None, title="Street Address", description="The street address of the user")
 	addressLine1: Union[str, None] = Field(None, title="Address Line 1", description="The first line of the address")
 	addressLine2: Union[str, None] = Field(None, title="Address Line 2",
@@ -117,6 +121,28 @@ class UserSubmission(PrivilegedUser):
 	password: str = Field(..., title="Plaintext Input Password")
 
 
+class UserReviewSubmission(BaseModel):
+	"""
+	User Review Submission Model
+	"""
+	# reviewerID: str = Field(..., title="Reviewer ID", description="The ID of the reviewer")
+	# reviewedID: str = Field(..., title="Reviewed User", description="The ID of the user being reviewed")
+	rating: int = Field(..., title="Rating", description="The rating given by the reviewer")
+	description: Union[str, None] = Field(None, title="Comment", description="The comment given by the reviewer")
+
+
+class UserReview(BaseModel):
+	"""
+	User Review Model
+	"""
+	id: str = Field(..., title="ID", description="The ID of the review")
+	reviewer: User = Field(..., title="Reviewer ID", description="The ID of the reviewer")
+	# reviewed: User = Field(..., title="Reviewed User", description="The user being reviewed")
+	rating: int = Field(..., title="Rating", description="The rating given by the reviewer")
+	description: Union[str, None] = Field(None, title="Comment", description="The comment given by the reviewer")
+	addedAt: int = Field(..., title="Added At", description="The date, as a unix epoch integer, the review was added")
+
+
 class Response:
 	class UserMeta(BaseModel):
 		pass
@@ -134,4 +160,7 @@ class Response:
 		"""
 		Privileged User Response Model
 		"""
+		pass
+
+	class UserReview(ResponseSchema[UserMeta, UserReview]):
 		pass
