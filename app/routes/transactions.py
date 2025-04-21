@@ -2,7 +2,7 @@ import time
 import uuid
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from starlette.requests import Request
 from typing_extensions import Union
 
@@ -146,12 +146,14 @@ def submitCheckout(
 def updateOrder(
 		orderID: str,
 		updatedOrder: Order,
+		backgroundsTasks: BackgroundTasks,
 		user=Depends(userRequired),
 		request=Request,
 ):
 	"""
 	Update an order.
 	Recipients can update to CANCELLED, sellers can update to any status.
+	:param backgroundsTasks:
 	:param request: HTTP request object
 	:param orderID: The ID of the order to update
 	:param updatedOrder: The updated order
@@ -173,14 +175,18 @@ def updateOrder(
 	if existingOrder.status == OrderStatuses.CANCELLED:
 		raise HTTPException(409, "Order is cancelled and cannot be updated")
 
-	data.updateOrderStatus(orderID, updatedOrder.status)
+	data.updateOrderStatus(existingOrder, updatedOrder.status)
 
 	existingOrder.status = updatedOrder.status
-	emailService.sendEmailTemplate(
-		**dict(existingOrder),
-		template=Templates.OrderUpdateEmail(),
-		recipientAddress=existingOrder.recipient.emailAddress,
-	)
+
+	# Send an email to the order recipient in the background
+	def sendOrderUpdateEmail():
+		emailService.sendEmailTemplate(
+			**dict(existingOrder),
+			template=Templates.OrderUpdateEmail(),
+			recipientAddress=existingOrder.recipient.emailAddress,
+		)
+	backgroundsTasks.add_task(sendOrderUpdateEmail)
 
 	return Response.OrderResponse(
 		meta={},
