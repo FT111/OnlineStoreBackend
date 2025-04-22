@@ -127,6 +127,7 @@ def submitCheckout(
 
 		)
 		orders.append(Order(**dict(order)))
+		print(order)
 		data.addOrder(order)
 
 	# Update the stock of the SKUs

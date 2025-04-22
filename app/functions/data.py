@@ -158,7 +158,10 @@ class DataRepository:
 		dbUser['joinedAt'] = int(dbUser['joinedAt'])
 
 		# Add the user to the database
-		Queries.Users.addUser(self.conn, dbUser)
+		try:
+			Queries.Users.addUser(self.conn, dbUser)
+		except sqlite3.IntegrityError:
+			raise HTTPException(status_code=409, detail="Email or username are already in use")
 
 		return PrivilegedUser(**dbUser)
 
@@ -447,7 +450,10 @@ class DataRepository:
 		if user.bannerURL: user.bannerURL = processAndStoreImagesFromBase64(user.bannerURL, user.id,
 																			'banner', 'user-profiles')
 
-		Queries.Users.updateUser(self.conn, user)
+		try:
+			Queries.Users.updateUser(self.conn, user)
+		except sqlite3.IntegrityError:
+			raise HTTPException(status_code=409, detail="Email or username are already in use")
 
 		return user
 
@@ -580,14 +586,14 @@ class DataRepository:
 				for i, sku in enumerate(order['skus']):
 
 					# Add to the overall order value
-					order['value'] += sku['price'] * sku['quantity']
+					order['value'] += sku['price']
 
 					# Convert the SKU to an SKUPurchase object with the listing
 					order['skus'][i] = SKUPurchase(
 						sku=SKU(**dict(sku)),
 						listing=ShortListing(**dict(sku['listing'])),
 						quantity=sku.get('quantity'),
-						value=sku.get('price')*sku.get('quantity')
+						value=sku.get('price')
 					)
 
 				order['recipient'] = json.loads(order['recipient']) if order.get('recipient') else None
@@ -621,9 +627,9 @@ class DataRepository:
 				sku=SKU(**dict(sku)),
 				listing=ShortListing(**dict(sku['listing'])),
 				quantity=sku.get('quantity'),
-				value=sku.get('price') * sku.get('quantity')
+				value=sku.get('price')
 			)
-			order['value'] += sku['price'] * sku['quantity']
+			order['value'] += sku['price']
 
 		order['recipient'] = json.loads(order['recipient']) if order.get('recipient') else None
 		order['seller'] = json.loads(order['seller']) if order.get('seller') else None
