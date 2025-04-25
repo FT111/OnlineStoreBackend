@@ -5,14 +5,28 @@ import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 
-from typing_extensions import Optional
+from typing_extensions import Optional, Union
 
 from .data import DataRepository
 from .utils import quickSort
 from ..database.database import SQLiteAdapter
 from ..database.databaseQueries import Queries
 from ..models.listings import Listing
+
+
+def timeFunction(f):
+	@wraps(f)
+	def wrap(*args, **kw):
+		ts = time.time()
+		result = f(*args, **kw)
+		te = time.time()
+		print('func:%r args:[%r, %r] took: %2.4f sec' % \
+			  (f.__name__, args, kw, te - ts))
+		return result
+
+	return wrap
 
 
 class Search(ABC):
@@ -45,7 +59,7 @@ class Search(ABC):
 
 	@staticmethod
 	def sortScores(queryScores: dict) -> list:
-		queryScoresSorted = sorted(queryScores.items(), key=lambda item: item[1], reverse=True)
+		queryScoresSorted = quickSort(list(queryScores.items()), key=lambda item: item[1])
 
 		return queryScoresSorted
 
@@ -67,6 +81,13 @@ class ListingSearch(Search):
 
 		self.k1 = 1.5
 		self.b = 0.75
+
+		# Inverted hierarchical index, pairs terms with a list of the documents they appear in
+		# Stored as term -> category -> subCategory -> [(listingID, termFrequency)]
+		self.invertedTermDocIndex = defaultdict(
+			lambda: defaultdict(
+				lambda: defaultdict(list[str, int])
+			))
 
 		self.documents = []
 		self.documentCount = 0
@@ -133,8 +154,9 @@ class ListingSearch(Search):
 		for term in terms:
 			rowTermFrequencies[term] += 1
 
-		for term in rowTermFrequencies:
+		for term, freq in rowTermFrequencies.items():
 			self.documentFrequencies[term] += 1
+			self.invertedTermDocIndex[term][category][subCategory].append((id, freq))
 
 		# Add the term frequencies to the termFrequencies dictionary
 		if subCategory not in self.termFrequencies[category]:
@@ -142,6 +164,7 @@ class ListingSearch(Search):
 
 		self.termFrequencies[category][subCategory].append((id, rowTermFrequencies))
 
+	@timeFunction
 	def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None,
 					   subCategory: Optional[str] = None) -> list:
 		tokenisedQuery = None
@@ -150,44 +173,97 @@ class ListingSearch(Search):
 			tokenisedQuery = self.tokeniseQuery(query)
 
 		queryScores = defaultdict(float)
-		# Calculate BM25 scores
+
+		if not tokenisedQuery:
+			# If no query is provided, return all listings in the categories requested
+			listings = self.getIndexedListingsByFilters(category, subCategory, None)
+			if not listings:
+				return []
+			for listingID, termFrequency in listings:
+				queryScores[listingID] += 1
+
+			return self.sortScores(queryScores)
+
+		# Calculate BM25 scores if a query is provided
 		# Checks against every category of stored listing terms
-		for searchCategory in self.termFrequencies:
-			for searchSubCategory in self.termFrequencies[searchCategory]:
-				for id, termFrequencies in self.termFrequencies[searchCategory][searchSubCategory]:
+		def _processQueryTerm(term):
+			if term not in self.invertedTermDocIndex:
+				return
 
-					if category != searchCategory and category is not None:
-						continue
+			# Track scores internally to avoid race conditions
+			termScores = defaultdict(float)
 
-					if subCategory != searchSubCategory and subCategory is not None:
-						continue
-					documentLength = sum(termFrequencies.values())
+			listingsWithTermGenerator = self.getIndexedListingsByFilters(category, subCategory, term)
+			# Calculate the score for each listing
+			for listingID, termFrequency in listingsWithTermGenerator:
+				documentLength = len(self.termFrequencies[listingID])
+				# Get the score for the term
+				score = self.scoreTerm(documentLength, term, termFrequency)
+				# Add the score to the query scores
+				# queryScores[listingID] += score
+				termScores[listingID] += score
 
-					# If a query is provided, score the terms against the query
-					if query is None:
-						# If no query is provided, score every listing equally
-						queryScores[id] = 1
-						continue
-					# Score against each term in the query
-					for term in tokenisedQuery:
-						# Only score terms that are in the document
-						if term not in termFrequencies:
-							continue
+			return termScores
 
-						termScore = self.scoreTerm(documentLength, term, termFrequencies)
-						queryScores[id] += termScore
+		with ThreadPoolExecutor(max_workers=16) as executor:
+			scores = executor.map(_processQueryTerm, tokenisedQuery)
+
+		for scoresPerTerm in scores:
+			for listingID, score in scoresPerTerm.items():
+				queryScores[listingID] += score
 
 		return self.sortScores(queryScores)
 
-	def scoreTerm(self, documentLength: int, term: str, termFrequencies: dict) -> float:
+	def getIndexedListingsByFilters(self, category: str, subCategory: str, term: Union[str, None]):
+		if category is not None:
+			if subCategory is not None:
+				# If a category and subcategory are specified, return all listings in that category and subcategory
+				if term is None:
+					# If no term is specified, return all listings in that category and subcategory
+					for indexedTerm in self.invertedTermDocIndex.keys():
+						# Yield from every stored term in the index
+						for listing in self.invertedTermDocIndex[indexedTerm][category][subCategory]:
+							yield listing
+							return
+				else:
+					# If a term is specified, return all listings in that specific term's category and subcategory
+					yield from self.invertedTermDocIndex[term][category][subCategory]
+			else:
+				if term is None:
+					# If only a category but no term or subcategory is specified, return all subcategories in that category
+					# for every stored term
+					for indexedTerm in self.invertedTermDocIndex.keys():
+						for subCategory in self.invertedTermDocIndex[indexedTerm][category].values():
+							yield from subCategory
+
+				else:
+					# If only a category and term are specified, return all subcategories in that category for that term
+					yield from [listing for subCategory in self.invertedTermDocIndex[term][category].values() for listing in
+								subCategory]
+		else:
+			if not term:
+				# If no category or term is specified, return all listings in all categories and subcategories
+				# This looks horrifically inefficient, but its not too bad
+				yield from [
+					listing for term in self.invertedTermDocIndex.values()
+					for category in term.values()
+					for subCategory in category.values() for listing
+					in subCategory
+				]
+			else:
+				# If no category is specified, return all categories and subcategories
+				yield from [listing for category in self.invertedTermDocIndex[term].values() for subCategory in
+							category.values() for listing in subCategory]
+
+	def scoreTerm(self, documentLength: int, term: str, termFrequencies: int) -> float:
 		"""
 		Scores a term using BM25 inverse document frequency
 		"""
 		inverseDocumentFrequency = math.log(
 			(self.documentCount - self.documentFrequencies[term] + 0.5) / (self.documentFrequencies[term] + 0.5))
 
-		termScore = inverseDocumentFrequency * (termFrequencies[term] * (self.k1 + 1)) / (
-				termFrequencies[term] + self.k1 * (1 - self.b + self.b * documentLength / self.documentCount))
+		termScore = inverseDocumentFrequency * (termFrequencies * (self.k1 + 1)) / (
+				termFrequencies + self.k1 * (1 - self.b + self.b * documentLength / self.documentCount))
 
 		return termScore
 
@@ -197,6 +273,7 @@ class ListingSearch(Search):
 		Sorts listings by a given sort
 		"""
 
+		# Sorts listings by a given sort, ascending or descending
 		reverse = order == 'desc'
 
 		if sort:
@@ -213,6 +290,9 @@ class ListingSearch(Search):
 			sortedListings = quickSort(listings, key=lambda listing: listing['views'], reverse=reverse)
 		elif sort == 'trending':
 			currentTime = int(time.time())
+			# Sort by the time since the listing was added, divided by the number of views
+			# This will give a higher score to listings that have been added recently and have a lot of views
+			# Listing views are defaulted to 1 if there are no views to avoid division by zero
 			sortedListings = quickSort(listings, key=lambda listing: (
 																			 currentTime - listing['addedAt']) /
 																	 listing['views'] if listing['views'] > 0 else 1,
@@ -222,7 +302,7 @@ class ListingSearch(Search):
 
 		return sortedListings
 
-	# @cachetools.func.ttl_cache(maxsize=128, ttl=300)
+	# @cached(TTLCache(maxsize=1024, ttl=300))
 	def query(self, conn: sqlite3.Connection,
 			  data: DataRepository,
 			  query: str, offset: int,
@@ -233,6 +313,7 @@ class ListingSearch(Search):
 
 		"""
 		Searches the database using the BM25 algorithm
+		This function is for high-level querying, handling pagination and sorting
 		:param data: A data repository object with an active database connection
 		:param subCategory: The subcategory to search in
 		:param conn: An context manager that returns a connection to a database
