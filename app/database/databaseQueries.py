@@ -373,9 +373,10 @@ class Queries:
 			cursor.execute("""
             UPDATE listings
             SET title = ?, description = ?, public = ?, 
-            subCategoryID = (SELECT id FROM subCategories WHERE title = ?)
+            subCategoryID = (SELECT id FROM subCategories WHERE title = ?),
+            conditionID = (SELECT id FROM conditions WHERE title = ?)
             WHERE id = ?
-            """, (listing.title, listing.description, listing.public, listing.subCategory, listing.id))
+            """, (listing.title, listing.description, listing.public, listing.subCategory,listing.condition, listing.id))
 
 			if listing.skuOptions:
 				existingSKUTypes = cursor.execute("SELECT title FROM skuTypes WHERE listingID = ?", (listing.id,))

@@ -128,7 +128,7 @@ class Listing(BaseModel):
 	description: str = Field(..., title="Product Description", description="The description of the product listing")
 	images: List[Optional[str]] = Field([], title="Product Images",
 										description="The images of the product listing. List of URLs")
-	condition: str = Field('New', title="Product Condition", description="The condition of the product listing")
+	condition: str = Field(title="Product Condition", description="The condition of the product listing")
 
 	subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
 	category: str = Field(..., title="Product Category", description="The category of the product listing")

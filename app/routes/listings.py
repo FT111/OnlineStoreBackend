@@ -146,6 +146,13 @@ async def updateSKU(sku: SKUWithStock,
 async def createSKU(sku: SKUSubmission,
 					listingID: str,
 					user=Depends(userRequired)):
+	"""
+	Create a new SKU for a listing.
+	:param sku: The SKU to create
+	:param listingID:
+	:param user:
+	:return: A response containing the SKU
+	"""
 	data = DataRepository(database.db)
 
 	verifyListingOwnership(data, listingID, user)
