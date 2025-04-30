@@ -88,6 +88,12 @@ class ListingSearch(Search):
 			lambda: defaultdict(
 				lambda: defaultdict(list[str, int])
 			))
+		# Standard index for category -> subCategory -> [(listingID, termFrequency)]
+		# Used when no term is specified
+		self.categoryIndex = defaultdict(
+				lambda: defaultdict(list[str, int])
+			)
+		# This should all realistically be in a database
 
 		self.documents = []
 		self.documentCount = 0
@@ -162,6 +168,7 @@ class ListingSearch(Search):
 		if subCategory not in self.termFrequencies[category]:
 			self.termFrequencies[category][subCategory] = []
 
+		self.categoryIndex[category][subCategory].append(id)
 		self.termFrequencies[category][subCategory].append((id, rowTermFrequencies))
 
 	@timeFunction
@@ -222,9 +229,7 @@ class ListingSearch(Search):
 					# If no term is specified, return all listings in that category and subcategory
 					for indexedTerm in self.invertedTermDocIndex.keys():
 						# Yield from every stored term in the index
-						for listing in self.invertedTermDocIndex[indexedTerm][category][subCategory]:
-							yield listing
-							return
+						yield from self.invertedTermDocIndex[indexedTerm][category][subCategory]
 				else:
 					# If a term is specified, return all listings in that specific term's category and subcategory
 					yield from self.invertedTermDocIndex[term][category][subCategory]
