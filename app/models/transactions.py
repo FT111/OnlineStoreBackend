@@ -82,8 +82,8 @@ class CardPaymentDetails(PaymentDetails):
 		:return:
 		"""
 
-		if len(value) < 16 or len(value) > 19:
-			raise ValueError('Card number must be between 16 and 19 characters')
+		if len(value) < 14 or len(value) > 19:
+			raise ValueError('Card number must be between 14 and 19 characters')
 
 		# Luhn algorithm
 		checksum = 0

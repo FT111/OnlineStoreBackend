@@ -1,6 +1,5 @@
-import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,11 +9,12 @@ from starlette.responses import StreamingResponse
 from ..database import database
 from ..functions.auth import userRequired, userOptional, generateToken
 from ..functions.data import DataRepository
+from ..functions.utils import userStatisticsGenerator
 from ..instances import emailService, rateLimiter
 from ..models.auth import Response as AuthResponse, Token
 from ..models.emails import Templates as EmailTemplates
 from ..models.listings import Response as ListingResponses
-from ..models.users import Response as UserResponse, PwdResetSubmission
+from ..models.users import Response as UserResponse, PwdResetSubmission, PrivilegedUser, UserReviewSubmission
 from ..models.users import UserSubmission, PwdResetRequest, PwdResetRequestSubmission
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -102,6 +102,54 @@ async def newUser(
 	return AuthResponse.Token(meta={}, data=Token(token=token))
 
 
+@router.post('/{userID}/reviews')
+async def submitReview(
+		userID: str,
+		review: UserReviewSubmission,
+		reviewerUser: dict = Depends(userRequired),
+):
+	"""
+	Submit a review for a user
+	:param userID: The user to review
+	:param review: The review to submit
+	:param reviewerUser: The user submitting the review
+	:return: 404 or the review
+	"""
+
+	data = DataRepository(database.db)
+
+	if reviewerUser['id'] == userID:
+		raise HTTPException(status_code=403, detail="Cannot review yourself")
+
+	data.submitUserReview(review, reviewerID=reviewerUser['id'], reviewedID=userID)
+
+	return {'meta': {}, 'data': review}
+
+
+@router.put('/{userID}', response_model=UserResponse.User)
+async def updateUser(
+		userID: str,
+		user: PrivilegedUser,
+	):
+	"""
+	Update a user in the database.
+	Users can only update their own information.
+	Could be PUT /me but this is more future-proof.
+	:param userID: The user's ID
+	:param user: The user to update
+	:return: 404 or the user
+	"""
+
+	if userID != user.id:
+		raise HTTPException(status_code=403, detail="Cannot update another user's account")
+
+	data = DataRepository(database.db)
+
+	user = data.updateUser(user)
+
+	return UserResponse.User(meta={}, data=user)
+
+
 @router.get('/{userID}')
 async def getUser(
 		userID: str,
@@ -130,6 +178,30 @@ async def getUser(
 
 	# Return the user in standard format
 	return {'meta': {}, 'data': user}
+
+
+@router.get('/{userID}/reviews')
+async def getUserReviews(
+		userID: str,
+):
+	"""
+	Get all user reviews that the user is recipient of
+	:param userID: The user's id
+	:return: 404 or the user's reviews
+	"""
+
+	data = DataRepository(database.db)
+
+	# Check if the user exists
+	user = data.getUserByID(userID)
+	if not user:
+		raise HTTPException(status_code=404, detail="User not found")
+
+	# Queries the database for the user's reviews
+	reviews = data.getUserReviews(user)
+
+	# Return the user's reviews in standard format
+	return {'meta': {}, 'data': reviews}
 
 
 @router.get('/{userID}/listings', response_model=ListingResponses.Listings)
@@ -200,25 +272,7 @@ def getUserUpdates(user=Depends(userRequired)) -> StreamingResponse:
 	"""
 	data = DataRepository(database.db)
 
-	def generateStatistics():
-
-		previousSales = None
-		while True:
-			endDate = timedelta(weeks=4)
-			startDate = datetime.now() - endDate
-			stats: dict = data.getUserStatistics(user, startDate.strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d'))
-			print(stats['sale'])
-			if stats.get('sale'):
-				if stats['sale']['count'] != previousSales:
-					if previousSales:
-						yield f'event: sale\ndata: {stats['sale']['count'] - previousSales}\n\n'
-
-					previousSales = stats['sale']['count']
-
-			yield f'event: userStatsUpdate\ndata: {stats}\n\n'
-			time.sleep(5)
-
-	return StreamingResponse(generateStatistics(), media_type='text/event-stream')
+	return StreamingResponse(userStatisticsGenerator(data, user), media_type='text/event-stream')
 
 
 @router.get('/me/statistics/{fromDate}/{toDate}')
