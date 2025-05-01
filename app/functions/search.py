@@ -11,6 +11,7 @@ from typing_extensions import Optional, Union
 
 from .data import DataRepository
 from .utils import quickSort
+from ..constants import SUFFIXES, PROCESSED_SUFFIXES, COMMON_TYPO_LETTERS
 from ..database.database import SQLiteAdapter
 from ..database.databaseQueries import Queries
 from ..models.listings import Listing
@@ -40,8 +41,47 @@ class Search(ABC):
 		pass
 
 	@staticmethod
-	def tokeniseQuery(query: str) -> list:
+	def tokeniseQuery(query: str, typoMitigation: bool = False) -> list:
+		"""
+		Tokenises a query into a list of terms
+		Stems the terms, removing common suffixes
+		If a term is hyphenated, it splits the term into its components
+		If requested, it also adds additional terms with swapped letters for common typos
+		:param query: The query to tokenise
+		:param typoMitigation: Whether to add common typos to the tokenised query - Avoid when indexing to avoid bloat
+		:return:
+		"""
 		tokenisedQuery = (query.lower()).split(" ")
+		originalQueryWordCount = len(tokenisedQuery)
+
+		for i, term in enumerate(tokenisedQuery):
+			if term.split('-') != [term]:
+				# If the term is hyphenated, split it into its components
+				# Remove the hyphenated term from the tokenised query
+				tokenisedQuery.pop(i)
+				term = term.split('-')
+				# Add the words to the tokenised query
+				tokenisedQuery.extend(term)
+				# Add the number of sub-words in the hyphenated term to the original word count
+				originalQueryWordCount += len(term) - 1
+				continue
+
+			for length in reversed(range(1, list(SUFFIXES.keys())[-1]+1)):
+				# Check if the term ends with a suffix - Checks for the longest possible suffix option first,
+				# then shorter ones in order
+				if PROCESSED_SUFFIXES.get(term[-length:], None) is not None:
+					# If it does, remove it
+					tokenisedQuery[i] = term[:-length]
+					break
+			# If this isn't a word already added from a typo-check, check for typos
+			# Avoids an infinite loop and unnecessary words
+			if not i > originalQueryWordCount and typoMitigation:
+				# Check for common typos per letter - If so, add the adjusted word to the tokenised query
+				for index, letter in enumerate(term):
+					if COMMON_TYPO_LETTERS.get(letter, None) is not None:
+						tokenisedQuery.extend(
+							[term[:index] + typoLetter + term[index + 1:] for typoLetter in COMMON_TYPO_LETTERS[letter]]
+						)
 
 		return tokenisedQuery
 
@@ -59,7 +99,7 @@ class Search(ABC):
 
 	@staticmethod
 	def sortScores(queryScores: dict) -> list:
-		queryScoresSorted = quickSort(list(queryScores.items()), key=lambda item: item[1])
+		queryScoresSorted = quickSort(list(queryScores.items()), key=lambda item: item[1], reverse=True)
 
 		return queryScoresSorted
 
@@ -71,9 +111,10 @@ class Search(ABC):
 # Implements the BM25 search algorithm for listings
 class ListingSearch(Search):
 	"""
-		This class is responsible for searching the SQL database using the BM25 algorithm.
-
+		This class is responsible for searching the database using the BM25 algorithm.
 		Incrementally indexes new additions to the database every minute.
+
+		Uses a multi-threaded approach to process documents in parallel, and stems words for better matching
 	"""
 
 	def __init__(self, dbSessionFunction):
@@ -144,9 +185,9 @@ class ListingSearch(Search):
 				self.documentCount += len(newListings)
 				self.averageDocumentLength = self.corpusLength / self.documentCount
 
-			# Sleep for 10 seconds before loading the table again to load new listings
+			# Sleep for 5 seconds before loading the table again to load new listings
 			lastTimestamp = int(time.time())
-			time.sleep(10)
+			time.sleep(5)
 
 	def processDocument(self, description: str, id, title: str, category: str, subCategory: str):
 		"""
@@ -164,12 +205,8 @@ class ListingSearch(Search):
 			self.documentFrequencies[term] += 1
 			self.invertedTermDocIndex[term][category][subCategory].append((id, freq))
 
-		# Add the term frequencies to the termFrequencies dictionary
-		if subCategory not in self.termFrequencies[category]:
-			self.termFrequencies[category][subCategory] = []
-
 		self.categoryIndex[category][subCategory].append(id)
-		self.termFrequencies[category][subCategory].append((id, rowTermFrequencies))
+		self.termFrequencies[id] = rowTermFrequencies
 
 	@timeFunction
 	def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None,
@@ -177,7 +214,7 @@ class ListingSearch(Search):
 		tokenisedQuery = None
 
 		if query is not None:
-			tokenisedQuery = self.tokeniseQuery(query)
+			tokenisedQuery = self.tokeniseQuery(query, typoMitigation=True)
 
 		queryScores = defaultdict(float)
 
@@ -195,7 +232,7 @@ class ListingSearch(Search):
 		# Checks against every category of stored listing terms
 		def _processQueryTerm(term):
 			if term not in self.invertedTermDocIndex:
-				return
+				return {}
 
 			# Track scores internally to avoid race conditions
 			termScores = defaultdict(float)
@@ -212,8 +249,12 @@ class ListingSearch(Search):
 
 			return termScores
 
-		with ThreadPoolExecutor(max_workers=16) as executor:
-			scores = executor.map(_processQueryTerm, tokenisedQuery)
+		# with ThreadPoolExecutor(max_workers=16) as executor:
+		# 	scores = executor.map(_processQueryTerm, tokenisedQuery)
+		# Run single-threaded for testing
+		scores = []
+		for term in tokenisedQuery:
+			scores.append(_processQueryTerm(term))
 
 		for scoresPerTerm in scores:
 			for listingID, score in scoresPerTerm.items():
@@ -336,8 +377,19 @@ class ListingSearch(Search):
 
 		# Get the full listings from the listingID scores
 		listings = data.idsToListings([score[0] for score in scores])
+		# If no listings are found, return an empty list
+		if not listings:
+			return 0, []
+
+		preSortedListings = []
+		# Presort the listings by their relevance score
+		for listingId, score in scores:
+			fullListing = [listing for listing in listings if listing['id'] == listingId]
+			if len(fullListing) > 0:
+				preSortedListings.append(fullListing[0])
+
 		# Get the rows of the top results
-		listings = self.sortListings(listings, sort, order)
+		listings = self.sortListings(preSortedListings, sort, order)
 		# Paginate the results
 		topListings = listings[offset:offset + limit]
 
