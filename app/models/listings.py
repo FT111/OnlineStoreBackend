@@ -15,7 +15,8 @@ class SKU(BaseModel):
 	title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
 	images: list[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
 	price: Union[float,int] = Annotated[int, Field(0, title="Product Price", description="The price of the product SKU")]
-	discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
+	discount: Optional[int] = Field(None, title="Product Discount",
+									description="The discount of the product SKU", lt=100, ge=0)
 	stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
 	options: Optional[dict[Optional[str], Optional[str]]] = Field({}, title="SKU Option Values",
@@ -33,6 +34,7 @@ class SKU(BaseModel):
 	@classmethod
 	@field_validator("discount")
 	def validate_discount(cls, value):
+		value = int(value)
 		if value is not None and (value < 0 or value > 99):
 			raise ValueError('Discount must be between 0 and 99')
 		return value
