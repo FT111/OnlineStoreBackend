@@ -14,7 +14,7 @@ class SKU(BaseModel):
 	id: str = Field(..., title="Product SKU", description="The SKU of the product")
 	title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
 	images: list[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
-	price: int = Annotated[int, Field(..., title="Product Price", description="The price of the product SKU")]
+	price: Union[float,int] = Annotated[int, Field(0, title="Product Price", description="The price of the product SKU")]
 	discount: Optional[int] = Field(None, title="Product Discount", description="The discount of the product SKU")
 	stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
@@ -132,7 +132,7 @@ class Listing(BaseModel):
 
 	subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
 	category: str = Field(..., title="Product Category", description="The category of the product listing")
-	basePrice: Union[str, float, None] = Field('0', title="Product Base Price",
+	basePrice: Union[float,int,None] = Field(0, title="Product Base Price",
 											   description="The base price of the product listing")
 
 	hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")

@@ -31,7 +31,7 @@ SELECT
             json_object(
                 'id', Sk.id,
                 'title', Sk.title,
-                'price', Sk.price,
+                'price', coalesce(Sk.price,0),
                 'discount', Sk.discount,
                 'stock', Sk.stock,
                 'images', (
@@ -79,7 +79,7 @@ SELECT
     WHERE skTy.listingID = Li.id
     ) AS skuOptions,
     
-    min(Sk.price * (1 - Sk.discount / 100.0)) AS basePrice,
+    coalesce(min(FLOOR(Sk.price * (1 - Sk.discount / 100))),0) AS basePrice,
     CASE
         WHEN EXISTS (
             SELECT 1
@@ -533,12 +533,13 @@ class Queries:
 		@staticmethod
 		def getListingsByIDs(cursor: DatabaseAdapter, listingIDs: list) -> list:
 			"""
-			Get a listing by its ID
+			Returns fetched public, complete listings by their IDs
 			"""
 			query = listingBaseQuery.format("""
             WHERE Li.id IN ({}) AND
             Li.public = 1 AND
-            totalStock > 0
+            totalStock > 0 AND
+            length(skus) > 0
             """.format(','.join('?' * len(listingIDs))))
 
 			result = cursor.execute(query, listingIDs)
@@ -553,7 +554,7 @@ class Queries:
 			"""
 			query = listingBaseQuery.format(f"""
             WHERE Li.id = ?
-            AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1'}
+            AND {'Li.ownerID = ?' if includePrivileged else 'Li.public = 1 AND length(skus) > 0'}
             """)
 
 			# Allow listing owners to view their own private listings
@@ -572,7 +573,7 @@ class Queries:
 
 			query = listingBaseQuery.format(f"""
             WHERE Li.ownerID = ?
-            """ + ("" if includePrivileged else "AND Li.public = 1"))
+            """ + ("" if includePrivileged else "AND Li.public = 1 AND length(skus) > 0"))
 
 			result = cursor.execute(query, (userID,))
 			listing = result

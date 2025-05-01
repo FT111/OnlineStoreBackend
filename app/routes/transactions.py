@@ -97,6 +97,12 @@ def submitCheckout(
 		if sku.stock < basket.items[sku.id]['quantity']:
 			raise HTTPException(409, f"SKU {sku.id} has insufficient stock")
 
+		if not sku.discount:
+			sku.discount = 0
+		# Check if the SKU has a discount and apply it
+		if sku.discount > 0:
+			sku.price = (sku.price * (100 - sku.discount)) // 100
+
 		# Add the value of the purchased SKU quantity to the total value
 		totalValue += sku.price * basket.items[sku.id]['quantity']
 
