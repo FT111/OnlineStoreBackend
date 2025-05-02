@@ -63,7 +63,7 @@ class PrivilegedUser(UserDetail):
 	postcode: Union[str, None] = Field(None, title="Postcode", description="The postcode of the user")
 
 	@classmethod
-	@field_validator("email")
+	@field_validator("emailAddress")
 	def validate_email(cls, value):
 		if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
 			raise ValueError('Invalid email address')

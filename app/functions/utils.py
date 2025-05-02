@@ -61,7 +61,7 @@ def userStatisticsGenerator(dataRepoInstance, user):
 		if stats.get('sale'):
 			if stats['sale']['count'] != previousSales:
 				if previousSales:
-					yield f'event: sale\ndata: {stats['sale']['count'] - previousSales}\n\n'
+					yield f'event: sale\ndata: {stats["sale"]["count"] - previousSales}\n\n'
 
 				previousSales = stats['sale']['count']
 

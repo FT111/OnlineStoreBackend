@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from starlette.responses import Response
 
 from ..database import database
 from ..functions.auth import authenticateUser, generateToken
@@ -30,3 +31,14 @@ async def authenticateCredentials(credentials: UserCredentials,
 	return AuthResponse.Token(meta={},
 							  data=Token(token=token)
 							  )
+
+
+@router.post('/logout')
+async def logout(res: Response):
+	"""
+	Log the user out
+	"""
+
+	# Set the cookie to expire
+	res.delete_cookie('Authorization')
+	return Response(status_code=200)

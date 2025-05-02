@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from starlette.requests import Request
-from typing_extensions import Union
+from typing_extensions import Union, List
 
 from app.functions.data import DataRepository
 from app.models.transactions import Basket, Response, EnrichedBasket, Order, OrderStatuses, SKUPurchase, InternalOrder, \
@@ -69,7 +69,7 @@ def submitCheckout(
 	# Fourth – add the order to the database
 	# Fifth – update the stock of the SKUs in listings
 
-	skus: list[SKUWithUser] = data.idsToSKUs(basket.items.keys(), SKUWithUser)
+	skus: List[SKUWithUser] = data.idsToSKUs(basket.items.keys(), SKUWithUser)
 	user: PrivilegedUser = data.getUserByID(user['id'],
 							requestUser=user,
 							includePrivileged=True)  # Fetch the user from the database to ensure the user is valid

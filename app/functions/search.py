@@ -7,7 +7,9 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 
+from cachetools import cached, TTLCache
 from typing_extensions import Optional, Union
+from typing_extensions import Tuple, Dict, List
 
 from .data import DataRepository
 from .utils import quickSort
@@ -25,7 +27,7 @@ def timeFunction(f):
 		te = time.time()
 		print('func:%r args:[%r, %r] took: %2.4f sec' % \
 			  (f.__name__, args, kw, te - ts))
-		return result
+		return result, te - ts
 
 	return wrap
 
@@ -41,7 +43,7 @@ class Search(ABC):
 		pass
 
 	@staticmethod
-	def tokeniseQuery(query: str, typoMitigation: bool = False) -> list:
+	def tokeniseQuery(query: str, typoMitigation: bool = False) -> Tuple[Dict[str, int], Dict[str, Union[bool, str]]]:
 		"""
 		Tokenises a query into a list of terms
 		Stems the terms, removing common suffixes
@@ -51,39 +53,51 @@ class Search(ABC):
 		:param typoMitigation: Whether to add common typos to the tokenised query - Avoid when indexing to avoid bloat
 		:return:
 		"""
-		tokenisedQuery = (query.lower()).split(" ")
+		tokenisedQuery = {}
+		for term in query.lower().split(' '):
+			# If the term is already in the tokenised query, skip it
+			if tokenisedQuery.get(term, None):
+				continue
+
+			# Add the term to the tokenised query - 'False' means it an original word not added from a typo-check
+			tokenisedQuery[term] = False
 		originalQueryWordCount = len(tokenisedQuery)
 
-		for i, term in enumerate(tokenisedQuery):
+		for term in list(tokenisedQuery):
 			if term.split('-') != [term]:
 				# If the term is hyphenated, split it into its components
 				# Remove the hyphenated term from the tokenised query
-				tokenisedQuery.pop(i)
+				tokenisedQuery.pop(term)
 				term = term.split('-')
 				# Add the words to the tokenised query
-				tokenisedQuery.extend(term)
+				tokenisedQuery.update({word: False for word in term})
 				# Add the number of sub-words in the hyphenated term to the original word count
 				originalQueryWordCount += len(term) - 1
 				continue
 
-			for length in reversed(range(1, list(SUFFIXES.keys())[-1]+1)):
-				# Check if the term ends with a suffix - Checks for the longest possible suffix option first,
-				# then shorter ones in order
-				if PROCESSED_SUFFIXES.get(term[-length:], None) is not None:
-					# If it does, remove it
-					tokenisedQuery[i] = term[:-length]
-					break
+			if len(term) > 3:
+				# If the term is longer than 3 characters, check for common suffixes and remove them
+				for length in reversed(range(1, list(SUFFIXES.keys())[-1]+1)):
+					# Check if the term ends with a suffix - Checks for the longest possible suffix option first,
+					# then shorter ones in order
+					if PROCESSED_SUFFIXES.get(term[-length:], None) is not None:
+						# If has a suffix, remove it
+						tokenisedQuery[term[:-length]] = term
+						break
 			# If this isn't a word already added from a typo-check, check for typos
 			# Avoids an infinite loop and unnecessary words
-			if not i > originalQueryWordCount and typoMitigation:
+			if not tokenisedQuery.get(term, True) and typoMitigation:
 				# Check for common typos per letter - If so, add the adjusted word to the tokenised query
 				for index, letter in enumerate(term):
 					if COMMON_TYPO_LETTERS.get(letter, None) is not None:
-						tokenisedQuery.extend(
-							[term[:index] + typoLetter + term[index + 1:] for typoLetter in COMMON_TYPO_LETTERS[letter]]
+
+						# Add possible variants of the word to the tokenised query
+						# Have them point to the original word
+						tokenisedQuery.update(
+							{term[:index] + typoLetter + term[index + 1:]: term for typoLetter in COMMON_TYPO_LETTERS[letter]}
 						)
 
-		return tokenisedQuery
+		return {'originalWordCount': originalQueryWordCount}, tokenisedQuery
 
 	@abstractmethod
 	def loadTable(self, conn: callable):
@@ -114,7 +128,9 @@ class ListingSearch(Search):
 		This class is responsible for searching the database using the BM25 algorithm.
 		Incrementally indexes new additions to the database every minute.
 
-		Uses a multi-threaded approach to process documents in parallel, and stems words for better matching
+		Uses a multi-threaded approach to process documents in parallel.
+		 and stems words for better matching.
+		 Search results are cached for 20 seconds to improve performance.
 	"""
 
 	def __init__(self, dbSessionFunction):
@@ -127,12 +143,12 @@ class ListingSearch(Search):
 		# Stored as term -> category -> subCategory -> [(listingID, termFrequency)]
 		self.invertedTermDocIndex = defaultdict(
 			lambda: defaultdict(
-				lambda: defaultdict(list[str, int])
+				lambda: defaultdict(list)
 			))
 		# Standard index for category -> subCategory -> [(listingID, termFrequency)]
 		# Used when no term is specified
 		self.categoryIndex = defaultdict(
-				lambda: defaultdict(list[str, int])
+				lambda: defaultdict(list)
 			)
 		# This should all realistically be in a database
 
@@ -194,7 +210,7 @@ class ListingSearch(Search):
 		Processes a document for BM25 search
 		"""
 		# Tokenise the terms
-		terms = [*self.tokeniseQuery(title), *self.tokeniseQuery(description)]
+		terms = [*list(self.tokeniseQuery(title)[1].keys()), *list(self.tokeniseQuery(description)[1].keys())]
 		self.corpusLength += len(terms)
 		rowTermFrequencies = defaultdict(int)
 
@@ -210,11 +226,16 @@ class ListingSearch(Search):
 
 	@timeFunction
 	def queryDocuments(self, query: Optional[str] = None, category: Optional[str] = None,
-					   subCategory: Optional[str] = None) -> list:
+					   subCategory: Optional[str] = None) -> Tuple[dict, list]:
 		tokenisedQuery = None
+		typoWords = {}
 
 		if query is not None:
-			tokenisedQuery = self.tokeniseQuery(query, typoMitigation=True)
+			meta, tokenisedQuery = self.tokeniseQuery(query, typoMitigation=True)
+
+			# Filters to only words added in the query for typo-mitigation - Non-typo words are set to False
+			typoWords = {word: tokenisedQuery[word] for word in tokenisedQuery if tokenisedQuery[word]}
+			tokenisedQuery = list(tokenisedQuery.keys())
 
 		queryScores = defaultdict(float)
 
@@ -222,11 +243,11 @@ class ListingSearch(Search):
 			# If no query is provided, return all listings in the categories requested
 			listings = self.getIndexedListingsByFilters(category, subCategory, None)
 			if not listings:
-				return []
+				return {}, []
 			for listingID, termFrequency in listings:
 				queryScores[listingID] += 1
 
-			return self.sortScores(queryScores)
+			return {}, self.sortScores(queryScores)
 
 		# Calculate BM25 scores if a query is provided
 		# Checks against every category of stored listing terms
@@ -249,18 +270,39 @@ class ListingSearch(Search):
 
 			return termScores
 
-		# with ThreadPoolExecutor(max_workers=16) as executor:
-		# 	scores = executor.map(_processQueryTerm, tokenisedQuery)
-		# Run single-threaded for testing
-		scores = []
-		for term in tokenisedQuery:
-			scores.append(_processQueryTerm(term))
+		if len(tokenisedQuery) > 4:
+			# If the query is a bit long, use multithreading to process the query in parallel
+			with ThreadPoolExecutor(max_workers=16) as executor:
+				# The query is split into its terms and each term is processed in parallel
+				scores = executor.map(_processQueryTerm, tokenisedQuery)
+		else:
+			# If the query is short, process it in a single thread
+			# Avoids the overhead of creating a thread pool, faster for small queries
+			scores = [_processQueryTerm(term) for term in tokenisedQuery]
 
 		for scoresPerTerm in scores:
+			# For each term, add the scores to the overall listing scores
 			for listingID, score in scoresPerTerm.items():
 				queryScores[listingID] += score
 
-		return self.sortScores(queryScores)
+		return self.returnWithSuggestedQueryIfApplicable(query, queryScores, tokenisedQuery, typoWords)
+
+	def returnWithSuggestedQueryIfApplicable(self, query, queryScores, tokenisedQuery, typoWords):
+		# Check if any typo-terms returned more results than the original query
+		# If so, suggest it to the user
+		for index, term in enumerate(tokenisedQuery):
+			if not self.invertedTermDocIndex.get(term, None):
+				continue
+			# Check if the term is a typo
+			if typoWords.get(term, False):
+				if self.documentFrequencies.get(term, 0) > self.documentFrequencies.get(typoWords[term], 0):
+					originalQueryWords = query.split(' ')
+					replacementIndex = originalQueryWords.index(typoWords[term])
+					return {
+						'suggestedQuery': ' '.join(
+							originalQueryWords[:replacementIndex] + [term] + originalQueryWords[replacementIndex + 1:]),
+					}, self.sortScores(queryScores)
+		return {}, self.sortScores(queryScores)
 
 	def getIndexedListingsByFilters(self, category: str, subCategory: str, term: Union[str, None]):
 		if category is not None:
@@ -314,13 +356,13 @@ class ListingSearch(Search):
 		return termScore
 
 	@staticmethod
-	def sortListings(listings: list[Listing], sort: str, order: str = 'desc') -> list:
+	def sortListings(listings: List[Listing], sort: str, order: str = 'desc') -> list:
 		"""
 		Sorts listings by a given sort
 		"""
 
 		# Sorts listings by a given sort, ascending or descending
-		reverse = order == 'desc'
+		reverse = order == 'des'
 
 		if sort:
 			sort = sort.lower()
@@ -348,14 +390,14 @@ class ListingSearch(Search):
 
 		return sortedListings
 
-	# @cached(TTLCache(maxsize=1024, ttl=300))
+	@cached(TTLCache(maxsize=1024, ttl=20))
 	def query(self, conn: sqlite3.Connection,
 			  data: DataRepository,
 			  query: str, offset: int,
 			  limit: int, category: Optional[str] = None,
 			  sort: Optional[str] = None, order: Optional[str] = None,
 			  subCategory: Optional[str] = None
-			  ) -> tuple[int, list]:
+			  ) -> Tuple[Dict[str, float], List[Listing]]:
 
 		"""
 		Searches the database using the BM25 algorithm
@@ -373,16 +415,18 @@ class ListingSearch(Search):
 		:return: A list of Listing objects
 		"""
 
-		scores = self.queryDocuments(query, category, subCategory)
+		query, elapsedTime = self.queryDocuments(query, category, subCategory)
+		meta, scores = query
 
 		# Get the full listings from the listingID scores
 		listings = data.idsToListings([score[0] for score in scores])
 		# If no listings are found, return an empty list
 		if not listings:
-			return 0, []
+			return {'total': 0, 'elapsed': 0}, []
 
 		preSortedListings = []
 		# Presort the listings by their relevance score
+		# This is done as idsToListings returns a completely unsorted list for some reason
 		for listingId, score in scores:
 			fullListing = [listing for listing in listings if listing['id'] == listingId]
 			if len(fullListing) > 0:
@@ -393,4 +437,7 @@ class ListingSearch(Search):
 		# Paginate the results
 		topListings = listings[offset:offset + limit]
 
-		return len(listings), topListings
+		# Return the meta data and the listings
+		queryData = {'total': len(listings), 'elapsed': elapsedTime, 'suggestedQuery': meta.get('suggestedQuery', None)}
+		return queryData, topListings
+

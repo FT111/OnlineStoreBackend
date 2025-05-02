@@ -79,8 +79,8 @@ SELECT
     WHERE skTy.listingID = Li.id
     ) AS skuOptions,
     
-    coalesce(min(FLOOR(Sk.price * (1 - Sk.discount / 100))),0) AS basePrice,
-    coalesce(max(FLOOR(Sk.price * (1 - Sk.discount / 100))),0) AS maxPrice,
+    coalesce(min(Sk.price * (1 - Sk.discount / 100)),0) AS basePrice,
+    coalesce(max(Sk.price * (1 - Sk.discount / 100)),0) AS maxPrice,
     CASE
         WHEN EXISTS (
             SELECT 1
@@ -227,7 +227,7 @@ class Queries:
 			return user
 
 		@staticmethod
-		def getUserStatistics(cursor: DatabaseAdapter, userID: str, start: str, end: str) -> list[sqlite3.Row]:
+		def getUserStatistics(cursor: DatabaseAdapter, userID: str, start: str, end: str) -> List[sqlite3.Row]:
 			"""
 			Get user statistics from listingEvents
 			"""

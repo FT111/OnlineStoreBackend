@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Union
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Optional
+from typing_extensions import Optional, Dict, List
 
 from app.models.listings import SKU, ShortListing
 from app.models.response import ResponseSchema
@@ -16,7 +16,7 @@ class Basket(BaseModel):
 	"""
 	A collection of SKU ids and their quantities.
 	"""
-	items: dict[str, dict[str, Union[str, int]]] = Field(
+	items: Dict[str, Dict[str, Union[str, int]]] = Field(
 		description='A dictionary of SKUs with their selected quantities',
 		examples=["{'SKU_ID': {'quantity': 1}}"])
 
@@ -39,7 +39,7 @@ class EnrichedBasket(Basket):
 	"""
 	A basket is a collection of listings
 	"""
-	items: dict[str, dict] = Field(description="""A dictionary of full SKU objects with 
+	items: Dict[str, dict] = Field(description="""A dictionary of full SKU objects with 
 																	their selected quantities and parent listings""",
 								   examples=['''{'SKU_ID': {'quantity': 1,
 																						'sku': SKU,
@@ -163,7 +163,7 @@ class Order(BaseModel):
 	"""
 
 	id: str = Field(description='The unique ID of the order')
-	skus: list[SKUPurchase] = Field(description='The SKUs in the order')
+	skus: List[SKUPurchase] = Field(description='The SKUs in the order')
 	value: int = Field(description='The total value of the order, in pence')
 	status: OrderStatuses = Field(description='The status of the order', examples=[OrderStatuses.PROCESSING])
 	recipient: Optional[PrivilegedUser] = Field(description='The recipient user of the order')
@@ -179,7 +179,7 @@ class InternalOrder(BaseModel):
 	"""
 
 	id: str
-	skus: list[SKUPurchase]
+	skus: List[SKUPurchase]
 	value: int
 	status: OrderStatuses
 	seller: User
@@ -193,8 +193,8 @@ class UserOrders(BaseModel):
 	"""
 	A user's orders
 	"""
-	purchases: list[Order] = Field(description='The user\'s orders')
-	sales: list[Order] = Field(description='The user\'s sales')
+	purchases: List[Order] = Field(description='The user\'s orders')
+	sales: List[Order] = Field(description='The user\'s sales')
 
 
 class Response:
@@ -225,7 +225,7 @@ class Response:
 		"""
 		pass
 
-	class CheckoutResponse(ResponseSchema[CheckoutMeta, list[Order]]):
+	class CheckoutResponse(ResponseSchema[CheckoutMeta, List[Order]]):
 		"""
 		A response containing a completed purchase
 		"""

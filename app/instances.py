@@ -13,7 +13,6 @@ from app.functions.email import EmailService
 from app.functions.search import ListingSearch
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
-print(os.environ)
 
 listingsSearch = ListingSearch(database.db)
 rateLimiter = Limiter(key_func=util.get_remote_address, storage_uri="memory://")

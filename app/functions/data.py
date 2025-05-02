@@ -2,12 +2,12 @@ import json
 import json
 import sqlite3
 import time
-from typing import List, Union
 from uuid import uuid4
 
 import bcrypt
 import pydantic
 from fastapi import HTTPException
+from typing_extensions import List, Union, Dict
 from typing_extensions import Optional, Type
 
 from app.database.databaseQueries import Queries
@@ -294,7 +294,7 @@ class DataRepository:
 		return castedListings
 
 	@staticmethod
-	def parseSKUs(skus: list[sqlite3.Row]) -> list[SKU]:
+	def parseSKUs(skus: List[sqlite3.Row]) -> List[SKU]:
 		"""
 		Parse a list of SKUs from the database
 		:param skus: List of sqlite3.Row objects
@@ -339,7 +339,7 @@ class DataRepository:
 		castedListings = self.formatListingRows(listings)
 
 		# Transform listings to dict<relevantskuID, Listing>
-		listingDict: dict[str, dict] = {}
+		listingDict: Dict[str, dict] = {}
 		for listing in castedListings:
 			for sku in listing['skus']:
 				listingDict[sku.id] = listing
@@ -533,8 +533,8 @@ class DataRepository:
 		:return:
 		"""
 
-		skus: list[sqlite3.Row] = Queries.Listings.getSKUsByIDs(self.conn, skuIDs)
-		skus: list[SKU] = [desiredObj(**dict(sku)) for sku in self.parseSKUs(skus)]
+		skus: List[sqlite3.Row] = Queries.Listings.getSKUsByIDs(self.conn, skuIDs)
+		skus: List[SKU] = [desiredObj(**dict(sku)) for sku in self.parseSKUs(skus)]
 
 		return skus
 

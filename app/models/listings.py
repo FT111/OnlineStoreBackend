@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional, Union, Dict
 
 from pydantic import BaseModel, Field, field_validator
@@ -13,13 +14,13 @@ class SKU(BaseModel):
 	"""
 	id: str = Field(..., title="Product SKU", description="The SKU of the product")
 	title: str = Field(..., title="Product Title", description="The title of the product SKU", max_length=50)
-	images: list[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
+	images: List[Optional[str]] = Field([], title="Product Images", description="The images of the product SKU")
 	price: Union[float,int] = Annotated[int, Field(0, title="Product Price", description="The price of the product SKU")]
 	discount: Optional[int] = Field(None, title="Product Discount",
 									description="The discount of the product SKU", lt=100, ge=0)
 	stock: int = Field(..., title="Product Stock", description="The stock of the product SKU")
 
-	options: Optional[dict[Optional[str], Optional[str]]] = Field({}, title="SKU Option Values",
+	options: Optional[Dict[Optional[str], Optional[str]]] = Field({}, title="SKU Option Values",
 											  description="The values of the SKU's assigned options, "
 														  "paired with the option type",
 											  )
@@ -176,6 +177,12 @@ class Listing(BaseModel):
 	@field_validator("totalStock")
 	def returnDefaultIfNone(cls, value):
 		return value or 0
+
+	@field_validator("basePrice", "maxPrice")
+	def floor_prices(cls, value):
+		if value is not None:
+			return math.floor(value)
+		return value
 
 	# @classmethod
 	# @field_validator("skus")

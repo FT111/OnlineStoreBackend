@@ -45,7 +45,6 @@ class HandleAnalyticsMiddleware(BaseHTTPMiddleware):
 		while True:
 			try:
 				impressions = Impressions.retrieveImpressionsFromRequest(request, getattr(request.state, 'user', None))
-				print(impressions)
 				if not impressions:
 					break
 
@@ -83,9 +82,6 @@ class GetUserMiddleware(BaseHTTPMiddleware):
 				request.state.user = None
 		else:
 			request.state.user = None
-
-		print(request.cookies)
-		print(request.state)
 
 		# Continue the request
 		response = await call_next(request)

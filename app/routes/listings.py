@@ -37,18 +37,20 @@ async def getListings(query: Optional[str] = None,
 	if limit > 40:
 		raise HTTPException(status_code=400, detail="Limit must be less than 40")
 
-	total, listings = instances.listingsSearch.query(database.db, data,
+	meta, listings = instances.listingsSearch.query(database.db, data,
 													 query=query, offset=offset, limit=limit, category=category,
 													 sort=sort, order=order, subCategory=subCategory)
 
 	return ListingResponses.Listings(meta={
-		'total': total,
+		'total': meta['total'],
 		'limit': limit,
 		'offset': offset,
 		'query': query.title() if query else None,
 		'category': category,
 		'sort': sort,
 		'order': order,
+		'suggestedQuery': meta.get('suggestedQuery', None),
+		'elapsedSeconds': round(meta['elapsed'], 4),
 	},
 		data=listings
 	)

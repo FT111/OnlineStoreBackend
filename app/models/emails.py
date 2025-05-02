@@ -42,8 +42,7 @@ class Templates:
 			return f"Order Update: {kwargs['id']}"
 
 		def getBody(self, **kwargs):
-			return (f"<h1>Order Update</h1><br /><p>Your order placed on {dt.datetime.fromtimestamp(kwargs['addedAt'])
-					.strftime('%A %w %B')}, sold by "
+			return (f"<h1>Order Update</h1><br /><p>Your order placed on {dt.datetime.fromtimestamp(kwargs['addedAt']).strftime('%A %B %d')}, sold by "
 					f"{kwargs['seller'].username}, is now <strong>{kwargs['status'].value}</strong></p><br />"
 					f"Your order consists of:<br /><ul>"
 					f"{', '.join([f'<li>{item.quantity}x {item.listing.title}</li>' for item in kwargs['skus']])}")
