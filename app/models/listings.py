@@ -135,7 +135,9 @@ class Listing(BaseModel):
 	subCategory: str = Field(None, title="Product Subcategory", description="The subcategory of the product listing")
 	category: str = Field(..., title="Product Category", description="The category of the product listing")
 	basePrice: Union[float,int,None] = Field(0, title="Product Base Price",
-											   description="The base price of the product listing")
+											   description="The cheapest SKU in the product listing")
+	maxPrice: Union[float,int,None] = Field(0, title="Product Max Price",
+											 description="The highest price of a SKU in the listing")
 
 	hasDiscount: bool = Field(False, title="Has Discount", description="Whether the product listing has a discount")
 	multipleSKUs: bool = Field(False, title="Multiple SKUs",
@@ -263,15 +265,19 @@ class Response:
 		"""
 		Metadata for a listings group response
 		"""
-		total: int = Field(0, title="Total Listings", description="The total number of listings returned")
-		limit: int = Field(10, title="Limit", description="The limit of listings per page")
-		offset: int = Field(0, title="Offset", description="The offset of listings")
+		total: int = Field(0, title="Total Listings", description="The total number of listings returned from the query")
+		limit: int = Field(10, title="Limit", description="The maximum number of listings to return to the request")
+		offset: int = Field(0, title="Offset", description="How many listings to skip, for pagination")
 		query: Union[str, None] = Field(None, title="Query", description="The query used for the listings")
-		category: Union[str, None] = Field(None, title="Category", description="The category for the listings")
+		category: Union[str, None] = Field(None, title="Category", description="The category filtered by")
 		sort: Optional[str] = Field('relevance', title="Sort", description="The sort used for the listings")
 		order: Optional[str] = Field('desc', title="Order", description="The order used for the listings")
 		topCategories: Optional[List] = Field(None, title="Top Categories",
 											  description="The top categories for the listings")
+		suggestedQuery: Optional[str] = Field(None, title="Suggested Query",
+											   description="A suggested query that may fix a misspelling/typo with the given one")
+		elapsedSeconds: Optional[float] = Field(None, title="Elapsed Seconds",
+											   description="How long the query took to execute")
 
 	class ListingMeta(BaseModel):
 		pass

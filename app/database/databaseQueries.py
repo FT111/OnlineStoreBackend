@@ -80,6 +80,7 @@ SELECT
     ) AS skuOptions,
     
     coalesce(min(FLOOR(Sk.price * (1 - Sk.discount / 100))),0) AS basePrice,
+    coalesce(max(FLOOR(Sk.price * (1 - Sk.discount / 100))),0) AS maxPrice,
     CASE
         WHEN EXISTS (
             SELECT 1
